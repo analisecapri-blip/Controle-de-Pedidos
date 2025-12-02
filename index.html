@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0891b2">
+    <meta name="description" content="Sistema de Controle de Romaneios - Gestão FIFO">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Romaneios">
+    <title>Controle de Romaneios</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- SheetJS para exportação Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    
+    <!-- CryptoJS para hash de senha (JÁ ESTÁ NO HEAD, mas se for para o body, deve vir antes do script.js) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    
+    <!-- CryptoJS para hash de senha -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+
+    <!-- Manifest PWA -->
+    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiQ29udHJvbGUgZGUgUm9tYW5laW9zIiwic2hvcnRfbmFtZSI6IlJvbWFuZWlvcyIsImRlc2NyaXB0aW9uIjoiU2lzdGVtYSBkZSBDb250cm9sZSBkZSBSb21hbmVpb3MgLSBHZXN0w6NvIEZJRk8iLCJzdGFydF91cmwiOiIuIiwgImRpc3BsYXkiOiJzdGFuZGFsb25lIiwgImJhY2tncm91bmRfY29sb3IiOiAiI2YwZjRmOCIsICJ0aGVtZV9jb2xvciI6ICIjMDg5MWIyIiwgIm9yaWVudGF0aW9uIjogInBvcnRyYWl0LXByaW1hcnkiLCAiaWNvbnMiOiBbeyJzcmMiOiJkYXRhOmltYWdlL3N2Zyt4bWwsJTNDc3ZnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zykgdmlld0JveD0nMCAwIDUxMiA1MTInJTNFJTNDcmVjdCB3aWR0aD0nNTEyJyBoZWlnaHQ9JzUxMicgZmlsbD0nJTIzMDg5MWIyJy8lM0UlM0N0ZXh0IHg9JzUwJTI1JyB5PSc1MCUyNScgZm9udC1zaXplPScyNTAnIGZvbnQtd2VpZ2h0PSdib2xkJyBmaWxsPSd3aGl0ZScgdGV4dC1hbmNob3I9J21pZGRsZScgZHk9Jy4zNWVtJyBmb250LWZhbWlseT0nc2Fucy1zZXJpZiclM0VDUiUzQy90ZXh0JTNFJTNDL3N2ZyUzRSIsICJzaXplcyI6ICI1MTJ4NTEyIiwgInR5cGUiOiJpbWFnZS9zdmcreG1sIiwgInB1cnBvc2UiOiJhbnkgbWFza2FibGUifV19">
+    
+    <!-- CSS Externo -->
+    <link rel="stylesheet" href="styles.css">
+    
+</head>
+<body class="bg-gray-50">
+    <div id="app" class="min-h-screen">
+        
+        <!-- TELA 1: Criar Admin -->
+        <div id="screen-create-admin" class="hidden">
+            <div class="min-h-screen flex items-center justify-center p-4">
+                <div class="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
+                    <div class="text-center mb-6">
+                        <div class="w-20 h-20 bg-cyan-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span class="text-white text-3xl font-bold">CR</span>
+                        </div>
+                        <h1 class="text-2xl font-bold text-gray-800">Bem-vindo!</h1>
+                        <p class="text-gray-600 mt-2">Primeira abertura - Crie o administrador do sistema</p>
+                    </div>
+                    
+                    <form id="form-create-admin" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nome Completo *</label>
+                            <input type="text" id="admin-name" required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">E-mail *</label>
+                            <input type="email" id="admin-email" required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Senha * (mínimo 6 caracteres)</label>
+                            <input type="password" id="admin-password" required minlength="6"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent">
+                        </div>
+                        <button type="submit" class="w-full bg-cyan-600 text-white py-4 rounded-lg font-semibold hover:bg-cyan-700 transition">
+                            Criar Administrador
+                        </button>
+                        <p id="create-admin-error" class="text-red-500 text-sm text-center hidden">Erro ao criar administrador.</p>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- TELA 2: Login -->
+        <div id="screen-login" class="hidden">
+            <div class="min-h-screen flex items-center justify-center p-4">
+                <div class="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
+                    <div class="text-center mb-6">
+                        <div class="w-20 h-20 bg-cyan-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span class="text-white text-3xl font-bold">CR</span>
+                        </div>
+                        <h1 class="text-2xl font-bold text-gray-800">Controle de Romaneios</h1>
+                        <p class="text-gray-600 mt-2">Faça login para continuar</p>
+                    </div>
+                    
+                    <!-- Tabs: Admin / Líder / Faturamento -->
+                    <div class="flex gap-2 mb-6 text-sm" id="login-tabs-container">
+                        <button id="tab-admin-login" class="flex-1 py-2 rounded-lg font-semibold bg-cyan-600 text-white">
+                            Admin
+                        </button>
+                        <button id="tab-leader-login" class="flex-1 py-2 rounded-lg font-semibold bg-gray-200 text-gray-700">
+                            Líder
+                        </button>
+                        <button id="tab-billing-login" class="flex-1 py-2 rounded-lg font-semibold bg-gray-200 text-gray-700">
+                            Faturamento
+                        </button>
+                    </div>
+                    
+                    <!-- Form Admin Login -->
+                    <form id="form-admin-login" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+                            <input type="email" id="login-admin-email" required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                            <input type="password" id="login-admin-password" required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent">
+                        </div>
+                        <button type="submit" class="w-full bg-cyan-600 text-white py-4 rounded-lg font-semibold hover:bg-cyan-700 transition">
+                            Entrar como Admin
+                        </button>
+                        <p id="login-admin-error" class="text-red-500 text-sm text-center hidden">E-mail ou senha incorretos.</p>
+                    </form>
+                    
+                    <!-- Form Leader Login -->
+                    <form id="form-leader-login" class="space-y-4 hidden">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                            <input type="text" id="login-leader-name" required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                            <input type="password" id="login-leader-password" required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                        </div>
+                        <button type="submit" class="w-full bg-purple-600 text-white py-4 rounded-lg font-semibold hover:bg-purple-700 transition">
+                            Entrar como Líder
+                        </button>
+                        <p id="login-leader-error" class="text-red-500 text-sm text-center hidden">Nome ou senha incorretos.</p>
+                    </form>
+                    
+                    <!-- Form Billing Login -->
+                    <form id="form-billing-login" class="space-y-4 hidden">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                            <input type="text" id="login-billing-name" required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                            <input type="password" id="login-billing-password" required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                        </div>
+                        <button type="submit" class="w-full bg-green-600 text-white py-4 rounded-lg font-semibold hover:bg-green-700 transition">
+                            Entrar como Faturamento
+                        </button>
+                        <p id="login-billing-error" class="text-red-500 text-sm text-center hidden">Nome ou senha incorretos.</p>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- TELA 3: Dashboard Principal (Admin, Líder, Faturamento) -->
+        <div id="screen-dashboard" class="hidden">
+            <!-- Header -->
+            <header class="bg-cyan-600 text-white shadow-lg sticky top-0 z-20">
+                <div class="container mx-auto px-4 py-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                                <span class="text-white text-xl font-bold">CR</span>
+                            </div>
+                            <div>
+                                <h1 class="text-xl font-bold">Controle de Romaneios</h1>
+                                <p class="text-sm text-cyan-100" id="user-info">Usuário Logado</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button id="btn-settings" class="px-3 py-2 bg-white/20 rounded-lg hover:bg-white/30 transition text-xl" title="Configurações">
+                                ⚙️
+                            </button>
+                            <button id="btn-logout" class="px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30 transition">
+                                Sair
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Tabs Navigation -->
+            <div class="bg-white border-b border-gray-200 sticky top-[72px] z-10 shadow-sm">
+                <div class="container mx-auto px-4">
+                    <div class="flex overflow-x-auto" id="dashboard-tabs">
+                        <!-- Tabs serão injetadas aqui via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <main class="container mx-auto p-4">
+                
+                <!-- ABA 1 – ABASTECIMENTO (só admin) -->
+                <div id="tab-abastecimento" class="tab-content space-y-6 hidden">
+                    <h2 class="text-2xl font-bold text-gray-800">📋 Abastecimento de Romaneios</h2>
+                    <div class="bg-white p-6 rounded-lg shadow-md space-y-4">
+                        <label class="block text-sm font-medium text-gray-700">Cole os números de romaneio (um por linha) *</label>
+                        <textarea id="romaneios-input" rows="6" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500"></textarea>
+                        
+                        <label class="block text-sm font-medium text-gray-700">Data e Hora de Entrega (para todos) *</label>
+                        <input type="datetime-local" id="data-entrega-input" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500">
+                        
+                        <button id="btn-adicionar-romaneios" class="w-full bg-cyan-600 text-white py-4 rounded-lg font-semibold hover:bg-cyan-700 transition btn-huge">
+                            ADICIONAR TODOS
+                        </button>
+                        <p id="abastecimento-message" class="text-sm text-center hidden"></p>
+                    </div>
+                </div>
+
+                <!-- ABA 2 – FILA FIFO (só admin) -->
+                <div id="tab-fila" class="tab-content space-y-6 hidden">
+                    <h2 class="text-2xl font-bold text-gray-800">🚚 Fila FIFO (Não Faturados)</h2>
+                    <div class="flex justify-end mb-4">
+                        <button id="btn-exportar-fila" class="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 transition">
+                            Exportar para Excel
+                        </button>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow-md overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nº Romaneio</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data/Hora Entrega</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Atraso</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-fila-fifo" class="bg-white divide-y divide-gray-200">
+                                <!-- Linhas da fila serão injetadas aqui -->
+                            </tbody>
+                        </table>
+                        <p id="fila-vazia" class="text-center py-4 text-gray-500 hidden">A fila FIFO está vazia.</p>
+                    </div>
+                </div>
+
+                <!-- ABA 3 – SEPARAÇÃO (só líderes logados) -->
+                <div id="tab-separacao" class="tab-content space-y-6 hidden">
+                    <h2 class="text-2xl font-bold text-gray-800">📦 Separação de Romaneios</h2>
+                    
+                    <!-- Bloco 1: Retirar Romaneio -->
+                    <div class="bg-white p-6 rounded-lg shadow-md space-y-4">
+                        <h3 class="text-xl font-semibold text-blue-600">1. RETIRAR ROMANEIO</h3>
+                        <label class="block text-sm font-medium text-gray-700">Número do Romaneio *</label>
+                        <input type="text" id="separacao-retirar-romaneio" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        
+                        <label class="block text-sm font-medium text-gray-700">Equipe Destino *</label>
+                        <select id="separacao-equipe-destino" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <!-- Opções de equipes serão injetadas aqui -->
+                        </select>
+                        
+                        <button id="btn-retirar-romaneio" class="w-full bg-blue-600 text-white py-4 rounded-lg font-semibold hover:bg-blue-700 transition btn-huge">
+                            RETIRAR
+                        </button>
+                        <p id="separacao-retirar-message" class="text-sm text-center hidden"></p>
+                    </div>
+
+                    <!-- Bloco 2: Finalizar com Observação -->
+                    <div class="bg-white p-6 rounded-lg shadow-md space-y-4">
+                        <h3 class="text-xl font-semibold text-green-600">2. FINALIZAR COM OBSERVAÇÃO</h3>
+                        
+                        <label class="block text-sm font-medium text-gray-700">Número do Romaneio *</label>
+                        <input type="text" id="separacao-finalizar-romaneio" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                        
+                        <label class="block text-sm font-medium text-gray-700">Observação do Líder *</label>
+                        <textarea id="separacao-observacao-lider" rows="4" maxlength="1000" placeholder="Digite aqui observações sobre esta separação (ex: itens danificados, faltas, trocas, etc.)" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 resize-vertical"></textarea>
+                        <p class="text-xs text-gray-500">Campo obrigatório. Mínimo 10 caracteres.</p>
+                        
+                        <button id="btn-finalizar-separacao" class="w-full bg-green-600 text-white py-4 rounded-lg font-semibold hover:bg-green-700 transition btn-huge">
+                            SEPARAÇÃO CONCLUÍDA
+                        </button>
+                        <p id="separacao-finalizar-message" class="text-sm text-center hidden"></p>
+                    </div>
+                </div>
+
+                <!-- ABA 4 – FATURAMENTO (só responsável pelo faturamento logado) -->
+                <div id="tab-faturamento" class="tab-content space-y-6 hidden">
+                    <h2 class="text-2xl font-bold text-gray-800">💰 Faturamento</h2>
+                    
+                    <!-- Lista de Pendentes -->
+                    <div class="bg-white p-4 rounded-lg shadow-md overflow-x-auto">
+                        <h3 class="text-xl font-semibold text-violet-600 mb-4">Romaneios Pendentes de Faturamento</h3>
+                        <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nº Romaneio</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data/Hora Entrega</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data Finalização Separação</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ação</th>
+                            </tr>
+                        </thead>
+                            <tbody id="tabela-pendentes-faturamento" class="bg-white divide-y divide-gray-200">
+                                <!-- Linhas de pendentes serão injetadas aqui -->
+                            </tbody>
+                        </table>
+                        <p id="pendentes-vazio" class="text-center py-4 text-gray-500 hidden">Nenhum romaneio pendente de faturamento.</p>
+                    </div>
+
+                    <!-- Faturar Vários -->
+                    <div class="bg-white p-6 rounded-lg shadow-md space-y-4">
+                        <h3 class="text-xl font-semibold text-green-600">Faturar Vários Romaneios</h3>
+                        <label class="block text-sm font-medium text-gray-700">Cole os números de romaneio (um por linha) *</label>
+                        <textarea id="faturamento-input" rows="4" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"></textarea>
+                        
+                        <button id="btn-faturar-varios" class="w-full bg-green-600 text-white py-4 rounded-lg font-semibold hover:bg-green-700 transition btn-huge">
+                            CONFIRMAR FATURAMENTO
+                        </button>
+                        <p id="faturamento-message" class="text-sm text-center hidden"></p>
+                    </div>
+
+                    <!-- Histórico de Faturados -->
+                    <div class="bg-white p-4 rounded-lg shadow-md space-y-4">
+                        <h3 class="text-xl font-semibold text-gray-800">Histórico de Faturados</h3>
+                        <div class="flex gap-4">
+                            <input type="date" id="filtro-data-faturamento" class="p-2 border border-gray-300 rounded-lg">
+                            <button id="btn-limpar-filtro-faturamento" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition">Limpar Filtro</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nº Romaneio</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data Finalização Separação</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data Faturamento</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Faturista</th>
+                            </tr>
+                        </thead>
+                                <tbody id="tabela-historico-faturamento" class="bg-white divide-y divide-gray-200">
+                                    <!-- Linhas do histórico serão injetadas aqui -->
+                                </tbody>
+                            </table>
+                            <p id="historico-faturamento-vazio" class="text-center py-4 text-gray-500 hidden">Nenhum romaneio faturado encontrado.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ABA 5 – HISTÓRICO E CONFIGURAÇÕES (só admin) -->
+                <div id="tab-historico-config" class="tab-content space-y-6 hidden">
+                    <h2 class="text-2xl font-bold text-gray-800">📊 Histórico e Configurações</h2>
+                    
+                    <!-- Histórico Completo -->
+                    <div class="bg-white p-4 rounded-lg shadow-md space-y-4">
+                        <h3 class="text-xl font-semibold text-gray-800">Histórico Completo de Romaneios</h3>
+                        <div class="flex flex-wrap gap-4 mb-4">
+                            <input type="text" id="filtro-busca-romaneio" placeholder="Buscar Nº Romaneio" class="p-2 border border-gray-300 rounded-lg">
+                            <select id="filtro-status-romaneio" class="p-2 border border-gray-300 rounded-lg">
+                                <option value="">Todos os Status</option>
+                                <option value="Disponível">Disponível</option>
+                                <option value="Em separação">Em separação</option>
+                                <option value="Pendente de faturamento">Pendente de faturamento</option>
+                                <option value="Faturado">Faturado</option>
+                            </select>
+                            <button id="btn-exportar-historico" class="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 transition">
+                                Exportar Histórico
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nº Romaneio</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data/Hora Entrega</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Líder</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Equipe</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data Finalização Separação</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Observação do Líder</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Faturista</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data Faturamento</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabela-historico-completo" class="bg-white divide-y divide-gray-200">
+                                    <!-- Linhas do histórico completo serão injetadas aqui -->
+                                </tbody>
+                            </table>
+                            <p id="historico-completo-vazio" class="text-center py-4 text-gray-500 hidden">Nenhum romaneio registrado.</p>
+                        </div>
+                    </div>
+
+                    <!-- Gerenciar Usuários e Equipes -->
+                    <div class="bg-white p-6 rounded-lg shadow-md space-y-6">
+                        <h3 class="text-xl font-semibold text-gray-800">Gerenciar Usuários e Equipes</h3>
+                        
+                        <!-- Gerenciar Líderes -->
+                        <div class="border-t pt-4">
+                            <h4 class="text-lg font-medium text-purple-600 mb-3">Líderes de Separação</h4>
+                            <form id="form-add-leader" class="flex gap-2 mb-4">
+                                <input type="text" id="leader-name-input" placeholder="Nome do Líder" required class="p-2 border border-gray-300 rounded-lg flex-grow">
+                                <input type="password" id="leader-password-input" placeholder="Senha" required minlength="6" class="p-2 border border-gray-300 rounded-lg w-24">
+                                <button type="submit" class="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition">Adicionar</button>
+                            </form>
+                            <ul id="lista-lideres" class="space-y-2">
+                                <!-- Líderes serão injetados aqui -->
+                            </ul>
+                        </div>
+
+                        <!-- Gerenciar Faturistas -->
+                        <div class="border-t pt-4">
+                            <h4 class="text-lg font-medium text-green-600 mb-3">Responsáveis pelo Faturamento</h4>
+                            <form id="form-add-billing" class="flex gap-2 mb-4">
+                                <input type="text" id="billing-name-input" placeholder="Nome do Faturista" required class="p-2 border border-gray-300 rounded-lg flex-grow">
+                                <input type="password" id="billing-password-input" placeholder="Senha" required minlength="6" class="p-2 border border-gray-300 rounded-lg w-24">
+                                <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">Adicionar</button>
+                            </form>
+                            <ul id="lista-faturistas" class="space-y-2">
+                                <!-- Faturistas serão injetados aqui -->
+                            </ul>
+                        </div>
+
+                        <!-- Gerenciar Equipes -->
+                        <div class="border-t pt-4">
+                            <h4 class="text-lg font-medium text-blue-600 mb-3">Equipes de Destino</h4>
+                            <form id="form-add-team" class="flex gap-2 mb-4">
+                                <input type="text" id="team-name-input" placeholder="Nome da Equipe" required class="p-2 border border-gray-300 rounded-lg flex-grow">
+                                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">Adicionar</button>
+                            </form>
+                            <ul id="lista-equipes" class="space-y-2">
+                                <!-- Equipes serão injetadas aqui -->
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Limpar Dados -->
+                    <div class="bg-red-100 p-6 rounded-lg shadow-md space-y-4">
+                        <h3 class="text-xl font-semibold text-red-800">🚨 Limpar Todos os Dados</h3>
+                        <p class="text-red-700">Esta ação é irreversível e apagará todos os romaneios, usuários e configurações.</p>
+                        <button id="btn-limpar-dados" class="bg-red-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-red-700 transition">
+                            Limpar Todos os Dados (Confirmação)
+                        </button>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+
+        <!-- Modal de Configurações -->
+        <div id="modal-settings" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+            <div class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold">Configurações do Sistema</h3>
+                    <button id="btn-close-settings" class="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+                </div>
+
+                <!-- Seção de Alteração de Senha (apenas para Admin) -->
+                <div id="settings-change-password" class="space-y-4 border-b pb-4 hidden">
+                    <h4 class="font-semibold text-gray-800">Alterar Senha</h4>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Senha Atual</label>
+                        <input type="password" id="input-current-password" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Nova Senha (mínimo 6 caracteres)</label>
+                        <input type="password" id="input-new-password" minlength="6" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Confirmar Nova Senha</label>
+                        <input type="password" id="input-confirm-password" minlength="6" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                    </div>
+                    <button id="btn-save-password" class="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition font-semibold">Alterar Senha</button>
+                    <p id="password-message" class="text-sm text-center hidden"></p>
+                </div>
+
+                <!-- Seção de Personalização (apenas para Admin) -->
+                <div id="settings-personalization" class="space-y-4 border-b pb-4 hidden">
+                    <h4 class="font-semibold text-gray-800">Personalização</h4>
+                    
+                    <!-- Logo/Imagem -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Logo do Aplicativo</label>
+                        <div class="flex gap-2">
+                            <input type="file" id="input-logo" accept="image/*" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm">
+                            <button id="btn-upload-logo" class="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition text-sm">Upload</button>
+                        </div>
+                        <div id="logo-preview" class="mt-2 w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                            <img id="logo-preview-img" src="" alt="Logo" class="w-full h-full object-cover hidden">
+                            <span id="logo-preview-text" class="text-gray-400 text-2xl font-bold">CR</span>
+                        </div>
+                    </div>
+
+                    <!-- Cor do Header -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Cor do Header</label>
+                        <div class="flex gap-2">
+                            <input type="color" id="input-header-color" value="#0891b2" class="w-12 h-10 border border-gray-300 rounded-lg cursor-pointer">
+                            <select id="select-header-color" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm">
+                                <option value="#0891b2">Azul Ciano (Padrão)</option>
+                                <option value="#0ea5e9">Azul Claro</option>
+                                <option value="#06b6d4">Ciano</option>
+                                <option value="#3b82f6">Azul</option>
+                                <option value="#8b5cf6">Púrpura</option>
+                                <option value="#ec4899">Rosa</option>
+                                <option value="#ef4444">Vermelho</option>
+                                <option value="#f97316">Laranja</option>
+                                <option value="#eab308">Amarelo</option>
+                                <option value="#22c55e">Verde</option>
+                                <option value="#1f2937">Cinza Escuro</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Nome do Aplicativo -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Nome do Aplicativo</label>
+                        <input type="text" id="input-app-name" placeholder="Controle de Romaneios" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                    </div>
+
+                    <button id="btn-save-personalization" class="w-full bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition font-semibold">Salvar Personalização</button>
+                    <p id="personalization-message" class="text-sm text-center hidden"></p>
+                </div>
+
+                <!-- Seção de Informações -->
+                <div class="space-y-2 mt-4 text-sm text-gray-600">
+                    <p><strong>Versão:</strong> 2.0</p>
+                    <p><strong>Usuário:</strong> <span id="settings-user-name">-</span></p>
+                    <p><strong>Tipo:</strong> <span id="settings-user-role">-</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de Confirmação -->
+        <div id="modal-confirm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+            <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full mx-4">
+                <h3 class="text-lg font-bold mb-4" id="modal-confirm-title">Confirmação</h3>
+                <p class="mb-6" id="modal-confirm-body">Tem certeza que deseja realizar esta ação?</p>
+                <div class="flex justify-end gap-3">
+                    <button id="btn-confirm-cancel" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400 transition">Cancelar</button>
+                    <button id="btn-confirm-ok" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">Confirmar</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JavaScript Externo - Ordem correta de carregamento -->
+    <!-- 1. Biblioteca Supabase (DEVE vir ANTES do script.js) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- 2. Script principal da aplicação (DEVE vir DEPOIS de todas as bibliotecas) -->
+    <script src="script.js"></script> 
+    
+</body>
+</html>
