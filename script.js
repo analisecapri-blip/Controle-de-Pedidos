@@ -1106,11 +1106,11 @@ function renderHistoricoCompleto() {
 }
 
 function renderTeamList() {
-    const ul = $('#lista-teams');
+    const ul = $('#lista-equipes');
     
     // CORREÇÃO: Verifica se o elemento existe antes de manipular
     if (!ul) {
-        console.warn('Elemento #lista-teams não encontrado. Pulando renderização de equipes.');
+        console.warn('Elemento #lista-equipes não encontrado. Pulando renderização de equipes.');
         return;
     }
     
@@ -1146,11 +1146,11 @@ $('#form-add-team').addEventListener('submit', (e) => {
 });
 
 function renderEquipeDestinoOptions() {
-    const select = $('#equipe-destino-input');
+    const select = $('#separacao-equipe-destino');
     
     // CORREÇÃO: Verifica se o elemento existe antes de manipular
     if (!select) {
-        console.warn('Elemento #equipe-destino-input não encontrado. Pulando renderização de opções.');
+        console.warn('Elemento #separacao-equipe-destino não encontrado. Pulando renderização de opções.');
         return;
     }
     
