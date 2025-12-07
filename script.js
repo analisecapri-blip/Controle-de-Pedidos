@@ -1186,33 +1186,3 @@ function calculateDelay(deliveryDate) {
     if (diffDays === 3) return { text: '3 dias', class: 'atraso-3-dias' };
     return { text: `${diffDays}+ dias`, class: 'atraso-4-mais-dias blink' };
 }
-
-// ==================== EXPORTAR PARA EXCEL ====================
-function exportTableElementToExcel(tableEl, filename='export.xls') {
-    if (!tableEl) { alert("Tabela não encontrada."); return; }
-    const tableHTML = tableEl.outerHTML.replace(/ /g, '%20');
-    const link = document.createElement("a");
-    link.href = 'data:application/vnd.ms-excel,' + tableHTML;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
-
-// bind export buttons
-document.addEventListener("DOMContentLoaded", () => {
-    const btnFila = document.getElementById("btn-exportar-fila");
-    if (btnFila) {
-        btnFila.addEventListener("click", () => {
-            const table = btnFila.closest("div").nextElementSibling.querySelector("table");
-            exportTableElementToExcel(table, "fila");
-        });
-    }
-    const btnHist = document.getElementById("btn-exportar-historico");
-    if (btnHist) {
-        btnHist.addEventListener("click", () => {
-            const table = btnHist.closest("div").nextElementSibling.querySelector("table");
-            exportTableElementToExcel(table, "historico");
-        });
-    }
-});
