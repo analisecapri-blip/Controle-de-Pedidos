@@ -17,9 +17,6 @@
     <!-- SheetJS para exportação Excel -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     
-    <!-- CryptoJS para hash de senha (JÁ ESTÁ NO HEAD, mas se for para o body, deve vir antes do script.js) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
-    
     <!-- CryptoJS para hash de senha -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
 
@@ -212,7 +209,7 @@
                 <div id="tab-fila" class="tab-content space-y-6 hidden">
                     <h2 class="text-2xl font-bold text-gray-800">🚚 Fila FIFO (Não Faturados)</h2>
                     <div class="flex justify-end mb-4">
-                        <button id="btn-exportar-fila" class="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 transition">
+                        <button id="btn-exportar-excel" class="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 transition">
                             Exportar para Excel
                         </button>
                     </div>
@@ -531,12 +528,7 @@
 
     </div>
 
-    <!-- JavaScript Externo - Ordem correta de carregamento -->
-    <!-- 1. Biblioteca Supabase (DEVE vir ANTES do script.js) -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <!-- 2. Script principal da aplicação (DEVE vir DEPOIS de todas as bibliotecas) -->
-    <script src="script.js"></script> 
-    
+    <!-- JavaScript Externo -->
+    <script src="script.js"></script>
 </body>
 </html>
