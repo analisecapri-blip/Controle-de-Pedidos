@@ -1104,43 +1104,48 @@ function renderSeparacao() {
 
 // Lógica da ABA 4 – FATURAMENTO (Faturamento)
 function renderFaturamento() {
+    // Lista de pendentes
     const romaneiosPendentes = appData.romaneios
         .filter(r => r.status === 'Pendente de faturamento')
         .sort((a, b) => {
-            const aTime = a.historico.find(h => h.status === 'Pendente de faturamento')?.timestamp || 0;
-            const bTime = b.historico.find(h => h.status === 'Pendente de faturamento')?.timestamp || 0;
+            const aTime = a.historico?.find(h => h.status === 'Pendente de faturamento')?.timestamp || 0;
+            const bTime = b.historico?.find(h => h.status === 'Pendente de faturamento')?.timestamp || 0;
             return new Date(aTime) - new Date(bTime);
         });
 
-    const tbody = $('#tabela-faturamento');
-    tbody.innerHTML = '';
-    $('#faturamento-vazia').classList.add('hidden');
+    const tbodyPendentes = document.getElementById('tabela-pendentes-faturamento');
+    if (tbodyPendentes) {
+        tbodyPendentes.innerHTML = '';
+        $('#pendentes-vazia')?.classList.add('hidden');
 
-    if (romaneiosPendentes.length === 0) {
-        $('#faturamento-vazia').classList.remove('hidden');
-        return;
+        if (romaneiosPendentes.length === 0) {
+            $('#pendentes-vazia')?.classList.remove('hidden');
+        }
+
+        romaneiosPendentes.forEach(romaneio => {
+            const row = tbodyPendentes.insertRow();
+            row.insertCell().textContent = romaneio.numero;
+            row.insertCell().textContent = romaneio.dataEntrega ? new Date(romaneio.dataEntrega).toLocaleString('pt-BR') : '-';
+            row.insertCell().textContent = romaneio.equipeDestino || 'N/A';
+
+            const actionCell = row.insertCell();
+            const btnFaturar = document.createElement('button');
+            btnFaturar.textContent = 'Faturar';
+            btnFaturar.className = 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-sm';
+            btnFaturar.addEventListener('click', async () => {
+                const ok = await updateRomaneioStatus(romaneio.numero, 'Faturado', appData.currentUser?.name || 'Sistema', appData.currentRole || 'Sistema');
+                if (ok) {
+                    renderFaturamento(); // Re-renderiza a lista de faturamento
+                } else {
+                    alert(`Falha ao faturar romaneio ${romaneio.numero}. Veja o console para detalhes.`);
+                }
+            });
+            actionCell.appendChild(btnFaturar);
+        });
     }
 
-    romaneiosPendentes.forEach(romaneio => {
-        const row = tbody.insertRow();
-        row.insertCell().textContent = romaneio.numero;
-        row.insertCell().textContent = new Date(romaneio.dataEntrega).toLocaleString('pt-BR');
-        row.insertCell().textContent = romaneio.equipeDestino || 'N/A';
-
-        const actionCell = row.insertCell();
-        const btnFaturar = document.createElement('button');
-        btnFaturar.textContent = 'Faturar';
-        btnFaturar.className = 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-sm';
-        btnFaturar.addEventListener('click', async () => {
-            const ok = await updateRomaneioStatus(romaneio.numero, 'Faturado', appData.currentUser?.name || 'Sistema', appData.currentRole || 'Sistema');
-            if (ok) {
-                renderFaturamento(); // Re-renderiza a lista de faturamento
-            } else {
-                alert(`Falha ao faturar romaneio ${romaneio.numero}. Veja o console para detalhes.`);
-            }
-        });
-        actionCell.appendChild(btnFaturar);
-    });
+    // Renderiza histórico de faturados
+    renderHistoricoFaturamento();
 }
 
 // Lógica da ABA 5 – HISTÓRICO & CONFIG (Admin)
@@ -1622,4 +1627,51 @@ function setupRealtimeSubscriptions() {
 
     // Guarda channel em window para debugging/possível unsubscribe
     window.__supabase_romaneios_channel = channel;
+}
+
+function renderHistoricoFaturamento() {
+    const tbody = document.getElementById('tabela-historico-faturamento');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    const filtroData = document.getElementById('filtro-data-faturamento')?.value;
+
+    const faturados = appData.romaneios
+        .filter(r => r.status === 'Faturado')
+        .sort((a, b) => {
+            const aTime = a.historico?.find(h => h.status === 'Faturado')?.timestamp || 0;
+            const bTime = b.historico?.find(h => h.status === 'Faturado')?.timestamp || 0;
+            return new Date(bTime) - new Date(aTime);
+        });
+
+    const filtered = faturados.filter(r => {
+        if (!filtroData) return true;
+        const faturadoEntry = r.historico?.find(h => h.status === 'Faturado');
+        if (!faturadoEntry) return false;
+        const faturadoDate = new Date(faturadoEntry.timestamp).toISOString().slice(0,10);
+        return faturadoDate === filtroData;
+    });
+
+    if (filtered.length === 0) {
+        $('#historico-faturamento-vazio')?.classList.remove('hidden');
+    } else {
+        $('#historico-faturamento-vazio')?.classList.add('hidden');
+    }
+
+    filtered.forEach(r => {
+        const row = tbody.insertRow();
+        row.insertCell().textContent = r.numero;
+        const finalizacao = r.historico?.find(h => h.status === 'Pendente de faturamento')?.timestamp || '-';
+        row.insertCell().textContent = finalizacao !== '-' ? new Date(finalizacao).toLocaleString('pt-BR') : '-';
+        const faturamento = r.historico?.find(h => h.status === 'Faturado');
+        row.insertCell().textContent = faturamento?.timestamp ? new Date(faturamento.timestamp).toLocaleString('pt-BR') : '-';
+        row.insertCell().textContent = faturamento?.user || '-';
+    });
+
+    const btnLimpar = document.getElementById('btn-limpar-filtro-faturamento');
+    if (btnLimpar) btnLimpar.addEventListener('click', () => {
+        const el = document.getElementById('filtro-data-faturamento');
+        if (el) el.value = '';
+        renderHistoricoFaturamento();
+    });
 }
