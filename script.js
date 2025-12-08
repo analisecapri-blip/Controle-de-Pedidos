@@ -438,7 +438,8 @@ if (appData.admin && appData.admin.email === email && appData.admin.passwordHash
     }
 
     if (user) {
-        appData.currentUser = { name: user.name, email: user.email || null };
+        // Guarda também o id do usuário para permitir filtros por líder
+        appData.currentUser = { id: user.id || null, name: user.name, email: user.email || null };
         appData.currentRole = role;
         saveLocalState(); // Salva o estado de login localmente
         renderDashboard();
@@ -1353,7 +1354,15 @@ function renderEquipeDestinoOptions() {
             return;
         }
         select.innerHTML = '<option value="">Selecione a Equipe</option>';
-        appData.teams.forEach(team => {
+
+        // Decide quais equipes mostrar: se o select for o de separação e o usuário for Líder,
+        // mostramos apenas as equipes atribuídas a esse líder (apenas objetos com leaderId).
+        let teamsToShow = appData.teams || [];
+        if (id === '#separacao-equipe-destino' && appData.currentRole === 'Líder' && appData.currentUser && appData.currentUser.id) {
+            teamsToShow = teamsToShow.filter(t => t && typeof t === 'object' && String(t.leaderId) === String(appData.currentUser.id));
+        }
+
+        teamsToShow.forEach(team => {
             const option = document.createElement('option');
             const teamName = (team && typeof team === 'object') ? team.name : team;
             option.value = teamName;
