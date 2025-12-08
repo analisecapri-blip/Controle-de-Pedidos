@@ -1245,19 +1245,23 @@ const filtroStatus = document.getElementById('filtro-status-romaneio');
 if (filtroStatus) filtroStatus.addEventListener('change', renderHistoricoCompleto);
 
 function renderTeamList() {
-    const ul = $('#lista-teams');
-    
-    // CORREÇÃO: Verifica se o elemento existe antes de manipular
+    const ul = $('#lista-equipes');
+    // Verifica se o elemento existe antes de manipular
     if (!ul) {
-        console.warn('Elemento #lista-teams não encontrado. Pulando renderização de equipes.');
+        console.warn('Elemento #lista-equipes não encontrado. Pulando renderização de equipes.');
         return;
     }
-    
+
     ul.innerHTML = '';
     appData.teams.forEach((team, index) => {
         const li = document.createElement('li');
         li.className = 'flex justify-between items-center p-2 border-b';
-        li.innerHTML = `<span>${team}</span>`;
+        // Suporta equipe como string ou objeto { id, name, leaderId }
+        const teamLabel = (team && typeof team === 'object') ? team.name : team;
+        const leaderInfo = (team && typeof team === 'object' && team.leaderId)
+            ? ` — ${getLeaderNameById(team.leaderId) || 'Líder indefinido'}`
+            : '';
+        li.innerHTML = `<span>${teamLabel}${leaderInfo}</span>`;
         const btnRemove = document.createElement('button');
         btnRemove.textContent = 'Remover';
         btnRemove.className = 'bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded text-sm';
@@ -1272,17 +1276,68 @@ function renderTeamList() {
     });
 }
 
-$('#form-add-team').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const name = $('#team-name').value.trim();
-    if (name && !appData.teams.includes(name)) {
-        appData.teams.push(name);
-        saveLocalState(); // Salva localmente
-        renderTeamList();
-        renderEquipeDestinoOptions();
-        $('#team-name').value = '';
-    }
-});
+// Retorna o nome do líder pelo id (ou null)
+function getLeaderNameById(id) {
+    const leader = appData.leaders.find(l => String(l.id) === String(id));
+    return leader ? leader.name : null;
+}
+
+// Popula o select de líderes dentro do formulário de criação de equipes
+function populateTeamLeaderSelect() {
+    const select = $('#team-leader-select');
+    if (!select) return;
+    select.innerHTML = '<option value="">Atribuir a um Líder (opcional)</option>';
+    appData.leaders.forEach(leader => {
+        const option = document.createElement('option');
+        option.value = leader.id;
+        option.textContent = leader.name;
+        select.appendChild(option);
+    });
+}
+
+// Gera um id simples para equipes criadas no cliente
+function generateId() {
+    return 'id-' + Math.random().toString(36).slice(2, 9);
+}
+
+// Handler para adicionar equipe (corrigido para ids do HTML)
+const formAddTeam = $('#form-add-team');
+if (formAddTeam) {
+    formAddTeam.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const nameInput = $('#team-name-input');
+        const leaderSelect = $('#team-leader-select');
+        if (!nameInput) {
+            alert('Campo de nome da equipe não encontrado.');
+            return;
+        }
+        const name = nameInput.value.trim();
+        const leaderId = leaderSelect ? leaderSelect.value : '';
+
+        if (!name) return;
+
+        // Suporta manter o formato antigo (string) ou objeto quando um líder é atribuído
+        let newTeam = name;
+        if (leaderId) {
+            newTeam = { id: generateId(), name, leaderId };
+        }
+
+        // Evita duplicatas por nome
+        const exists = appData.teams.some(t => {
+            if (t && typeof t === 'object') return t.name === name;
+            return t === name;
+        });
+
+        if (!exists) {
+            appData.teams.push(newTeam);
+            saveLocalState(); // Salva localmente
+            renderTeamList();
+            renderEquipeDestinoOptions();
+            nameInput.value = '';
+            if (leaderSelect) leaderSelect.value = '';
+        }
+    });
+}
 
 function renderEquipeDestinoOptions() {
     // Tenta popular múltiplos selects que podem existir no HTML
@@ -1296,8 +1351,9 @@ function renderEquipeDestinoOptions() {
         select.innerHTML = '<option value="">Selecione a Equipe</option>';
         appData.teams.forEach(team => {
             const option = document.createElement('option');
-            option.value = team;
-            option.textContent = team;
+            const teamName = (team && typeof team === 'object') ? team.name : team;
+            option.value = teamName;
+            option.textContent = teamName;
             select.appendChild(option);
         });
     });
