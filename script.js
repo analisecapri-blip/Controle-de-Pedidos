@@ -1024,7 +1024,7 @@ function renderFilaFIFO() {
             select.addEventListener('change', async (e) => {
                 const equipe = e.target.value;
                 if (equipe) {
-                    await updateRomaneioStatus(romaneio.numero, 'Em separação', appData.currentUser.name, appData.currentRole, { equipeDestino: equipe });
+                    await updateRomaneioStatus(romaneio.numero, 'Em separação', appData.currentUser?.name || 'Sistema', appData.currentRole || 'Sistema', { equipeDestino: equipe });
                 }
             });
             actionCell.appendChild(select);
@@ -1062,7 +1062,7 @@ function renderSeparacao() {
         btnFimSeparacao.textContent = 'Fim da Separação';
         btnFimSeparacao.className = 'bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded text-sm';
         btnFimSeparacao.addEventListener('click', async () => {
-            await updateRomaneioStatus(romaneio.numero, 'Pendente de faturamento', appData.currentUser.name, appData.currentRole);
+            await updateRomaneioStatus(romaneio.numero, 'Pendente de faturamento', appData.currentUser?.name || 'Sistema', appData.currentRole || 'Sistema');
             renderSeparacao(); // Re-renderiza a lista de separação
         });
         actionCell.appendChild(btnFimSeparacao);
@@ -1099,7 +1099,7 @@ function renderFaturamento() {
         btnFaturar.textContent = 'Faturar';
         btnFaturar.className = 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-sm';
         btnFaturar.addEventListener('click', async () => {
-            await updateRomaneioStatus(romaneio.numero, 'Faturado', appData.currentUser.name, appData.currentRole);
+            await updateRomaneioStatus(romaneio.numero, 'Faturado', appData.currentUser?.name || 'Sistema', appData.currentRole || 'Sistema');
             renderFaturamento(); // Re-renderiza a lista de faturamento
         });
         actionCell.appendChild(btnFaturar);
@@ -1246,7 +1246,7 @@ if (btnRetirar) {
         }
 
         // Atualiza status no Supabase e local
-        await updateRomaneioStatus(romaneio.numero, 'Em separação', appData.currentUser.name, appData.currentRole, { equipeDestino: equipe });
+        await updateRomaneioStatus(romaneio.numero, 'Em separação', appData.currentUser?.name || 'Sistema', appData.currentRole || 'Sistema', { equipeDestino: equipe });
 
         // Feedback e limpeza de campos
         if (messageEl) {
@@ -1316,7 +1316,7 @@ if (btnFinalizarSeparacao) {
         }
 
         // Atualiza status para Pendente de faturamento e adiciona observação + data de finalização
-        await updateRomaneioStatus(romaneio.numero, 'Pendente de faturamento', appData.currentUser.name, appData.currentRole, {
+        await updateRomaneioStatus(romaneio.numero, 'Pendente de faturamento', appData.currentUser?.name || 'Sistema', appData.currentRole || 'Sistema', {
             observacaoLider: observacao,
             dataFinalizacaoSeparacao: new Date().toISOString()
         });
