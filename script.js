@@ -13,7 +13,7 @@ let appData = {
     admin: null, // Será carregado do Supabase
     leaders: [], // Serão carregados do Supabase
     billings: [], // Serão carregados do Supabase
-    teams: ['Equipe A', 'Equipe B', 'Equipe C'], // Equipes iniciais (Pode ser migrado para Supabase se necessário)
+    teams: ['Equipe Do Wel', 'Equipe B', 'Equipe C'], // Equipes iniciais (Pode ser migrado para Supabase se necessário)
     romaneios: [], // Será populado pelo Supabase
     currentUser: null, // Salvo localmente para manter o estado de login
     currentRole: null // Salvo localmente para manter o estado de login
