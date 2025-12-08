@@ -903,7 +903,8 @@ async function updateRomaneioStatus(romaneioNumero, newStatus, user, role, addit
 
     if (romaneioIndex === -1) {
         console.error(`Romaneio ${romaneioNumero} não encontrado.`);
-        return;
+        alert(`Romaneio ${romaneioNumero} não encontrado localmente. Verifique se os dados foram carregados.`);
+        return false;
     }
 
     const romaneio = appData.romaneios[romaneioIndex];
@@ -954,7 +955,7 @@ async function updateRomaneioStatus(romaneioNumero, newStatus, user, role, addit
     }
 
     // Executa a atualização
-    console.debug('updateRomaneioStatus: matchById=', matchById, 'updates=', updates);
+    console.debug('updateRomaneioStatus: romaneioBefore=', romaneio, 'matchById=', matchById, 'updates=', updates);
     const { data, error } = await query.select();
 
     if (error) {
@@ -974,18 +975,20 @@ async function updateRomaneioStatus(romaneioNumero, newStatus, user, role, addit
         if (fetchErr) {
             console.error('Erro ao buscar romaneio após update:', fetchErr);
             alert(`Romaneio atualizado, mas falha ao buscar registro atualizado: ${fetchErr.message || JSON.stringify(fetchErr)}`);
-            return;
+            return false;
         }
         if (!fetched || fetched.length === 0) {
             console.error('Nenhum registro encontrado após update. Verifique permissões e se o romaneio existe.');
             alert('Atualização concluída, mas não foi possível obter o registro atualizado. Verifique permissões no Supabase.');
-            return;
+            return false;
         }
         appData.romaneios[romaneioIndex] = fetched[0];
     } else {
         // Se a atualização no Supabase retornou o registro, atualiza local
         appData.romaneios[romaneioIndex] = data[0];
     }
+
+    return true;
 
     // Re-renderiza as listas afetadas
     renderFilaFIFO();
@@ -1082,8 +1085,12 @@ function renderSeparacao() {
         btnFimSeparacao.textContent = 'Fim da Separação';
         btnFimSeparacao.className = 'bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded text-sm';
         btnFimSeparacao.addEventListener('click', async () => {
-            await updateRomaneioStatus(romaneio.numero, 'Pendente de faturamento', appData.currentUser?.name || 'Sistema', appData.currentRole || 'Sistema');
-            renderSeparacao(); // Re-renderiza a lista de separação
+            const ok = await updateRomaneioStatus(romaneio.numero, 'Pendente de faturamento', appData.currentUser?.name || 'Sistema', appData.currentRole || 'Sistema');
+            if (ok) {
+                renderSeparacao(); // Re-renderiza a lista de separação
+            } else {
+                alert(`Falha ao marcar romaneio ${romaneio.numero} como Pendente de faturamento. Veja o console para detalhes.`);
+            }
         });
         actionCell.appendChild(btnFimSeparacao);
     });
@@ -1119,8 +1126,12 @@ function renderFaturamento() {
         btnFaturar.textContent = 'Faturar';
         btnFaturar.className = 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-sm';
         btnFaturar.addEventListener('click', async () => {
-            await updateRomaneioStatus(romaneio.numero, 'Faturado', appData.currentUser?.name || 'Sistema', appData.currentRole || 'Sistema');
-            renderFaturamento(); // Re-renderiza a lista de faturamento
+            const ok = await updateRomaneioStatus(romaneio.numero, 'Faturado', appData.currentUser?.name || 'Sistema', appData.currentRole || 'Sistema');
+            if (ok) {
+                renderFaturamento(); // Re-renderiza a lista de faturamento
+            } else {
+                alert(`Falha ao faturar romaneio ${romaneio.numero}. Veja o console para detalhes.`);
+            }
         });
         actionCell.appendChild(btnFaturar);
     });
