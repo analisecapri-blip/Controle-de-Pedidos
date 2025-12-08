@@ -319,6 +319,12 @@ function updateUserInfo() {
 async function checkInitialState() {
     loadLocalState(); // Carrega estado de login e configurações locais
     await loadAllDataFromSupabase(); // Carrega todos os dados do Supabase
+    // Configura assinaturas em tempo real para manter diferentes usuários sincronizados
+    try {
+        setupRealtimeSubscriptions();
+    } catch (err) {
+        console.warn('Não foi possível inicializar Realtime subscriptions:', err);
+    }
 
     if (!appData.admin) {
         showScreen('#screen-create-admin');
@@ -1572,4 +1578,48 @@ if (btnFaturarVarios) {
         renderHistoricoCompleto();
         renderFilaFIFO();
     });
+}
+
+// ============================
+// Realtime Supabase - sincroniza romaneios entre clientes
+// ============================
+function setupRealtimeSubscriptions() {
+    if (typeof supabaseClient === 'undefined' || !supabaseClient.channel) {
+        console.warn('Supabase Realtime não disponível nesta versão do cliente.');
+        return;
+    }
+
+    const channel = supabaseClient
+        .channel('public:romaneios')
+        .on('postgres_changes', { event: '*', schema: 'public', table: ROMANEIOS_TABLE }, (payload) => {
+            console.debug('Realtime romaneios payload:', payload);
+
+            // Em payload, new contém o registro após insert/update, old contém antes.
+            const novo = payload.new || payload.record || null;
+            const velho = payload.old || null;
+
+            if (novo) {
+                // upsert local
+                const idx = appData.romaneios.findIndex(r => (r.id !== undefined && r.id === novo.id) || String(r.numero) === String(novo.numero));
+                if (idx !== -1) {
+                    appData.romaneios[idx] = novo;
+                } else {
+                    appData.romaneios.push(novo);
+                }
+            } else if (velho) {
+                // delete
+                const idx = appData.romaneios.findIndex(r => (r.id !== undefined && r.id === velho.id) || String(r.numero) === String(velho.numero));
+                if (idx !== -1) appData.romaneios.splice(idx, 1);
+            }
+
+            // Re-renderiza todas as views relevantes
+            try { renderFilaFIFO(); } catch (e) { console.debug(e); }
+            try { renderSeparacao(); } catch (e) { console.debug(e); }
+            try { renderFaturamento(); } catch (e) { console.debug(e); }
+            try { renderHistoricoCompleto(); } catch (e) { console.debug(e); }
+        })
+        .subscribe();
+
+    // Guarda channel em window para debugging/possível unsubscribe
+    window.__supabase_romaneios_channel = channel;
 }
