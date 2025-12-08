@@ -1146,20 +1146,91 @@ $('#form-add-team').addEventListener('submit', (e) => {
 });
 
 function renderEquipeDestinoOptions() {
-    const select = $('#equipe-destino-input');
-    
-    // CORREÇÃO: Verifica se o elemento existe antes de manipular
-    if (!select) {
-        console.warn('Elemento #equipe-destino-input não encontrado. Pulando renderização de opções.');
-        return;
-    }
-    
-    select.innerHTML = '<option value="">Selecione a Equipe</option>';
-    appData.teams.forEach(team => {
-        const option = document.createElement('option');
-        option.value = team;
-        option.textContent = team;
-        select.appendChild(option);
+    // Tenta popular múltiplos selects que podem existir no HTML
+    const selectIds = ['#equipe-destino-input', '#separacao-equipe-destino'];
+    selectIds.forEach(id => {
+        const select = $(id);
+        if (!select) {
+            // não é um erro crítico — apenas pula
+            return;
+        }
+        select.innerHTML = '<option value="">Selecione a Equipe</option>';
+        appData.teams.forEach(team => {
+            const option = document.createElement('option');
+            option.value = team;
+            option.textContent = team;
+            select.appendChild(option);
+        });
+    });
+}
+
+// Handler para Retirar Romaneio (Líder)
+const btnRetirar = document.getElementById('btn-retirar-romaneio');
+if (btnRetirar) {
+    btnRetirar.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const inputNumero = document.getElementById('separacao-retirar-romaneio');
+        const selectEquipe = document.getElementById('separacao-equipe-destino');
+        const messageEl = document.getElementById('separacao-retirar-message');
+
+        if (messageEl) messageEl.classList.add('hidden');
+
+        if (!inputNumero || !selectEquipe) {
+            alert('Campos de retirar romaneio não encontrados na página.');
+            return;
+        }
+
+        const numero = inputNumero.value.trim();
+        const equipe = selectEquipe.value;
+
+        if (!numero) {
+            if (messageEl) {
+                messageEl.textContent = 'Informe o número do romaneio.';
+                messageEl.classList.remove('hidden');
+            }
+            return;
+        }
+
+        if (!equipe) {
+            if (messageEl) {
+                messageEl.textContent = 'Selecione a equipe destino.';
+                messageEl.classList.remove('hidden');
+            }
+            return;
+        }
+
+        // Busca o romaneio
+        const romaneio = appData.romaneios.find(r => String(r.numero) === String(numero));
+        if (!romaneio) {
+            if (messageEl) {
+                messageEl.textContent = `Romaneio ${numero} não encontrado.`;
+                messageEl.classList.remove('hidden');
+            }
+            return;
+        }
+
+        // Só permite retirar se estiver Disponível
+        if (romaneio.status !== 'Disponível') {
+            if (messageEl) {
+                messageEl.textContent = `Romaneio ${numero} não está disponível para retirada (status: ${romaneio.status}).`;
+                messageEl.classList.remove('hidden');
+            }
+            return;
+        }
+
+        // Atualiza status no Supabase e local
+        await updateRomaneioStatus(romaneio.numero, 'Em separação', appData.currentUser.name, appData.currentRole, { equipeDestino: equipe });
+
+        // Feedback e limpeza de campos
+        if (messageEl) {
+            messageEl.textContent = `Romaneio ${numero} retirado com sucesso pela equipe ${equipe}.`;
+            messageEl.classList.remove('hidden');
+        }
+        inputNumero.value = '';
+        selectEquipe.value = '';
+        // Re-renderizações para garantir consistência
+        renderFilaFIFO();
+        renderSeparacao();
     });
 }
 
