@@ -1234,6 +1234,81 @@ if (btnRetirar) {
     });
 }
 
+// Handler para Finalizar Separação com Observação (Líder)
+const btnFinalizarSeparacao = document.getElementById('btn-finalizar-separacao');
+if (btnFinalizarSeparacao) {
+    btnFinalizarSeparacao.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const inputNumero = document.getElementById('separacao-finalizar-romaneio');
+        const textareaObs = document.getElementById('separacao-observacao-lider');
+        const messageEl = document.getElementById('separacao-finalizar-message');
+
+        if (messageEl) messageEl.classList.add('hidden');
+
+        if (!inputNumero || !textareaObs) {
+            alert('Campos de finalização não encontrados na página.');
+            return;
+        }
+
+        const numero = inputNumero.value.trim();
+        const observacao = textareaObs.value.trim();
+
+        if (!numero) {
+            if (messageEl) {
+                messageEl.textContent = 'Informe o número do romaneio.';
+                messageEl.classList.remove('hidden');
+            }
+            return;
+        }
+
+        if (!observacao || observacao.length < 10) {
+            if (messageEl) {
+                messageEl.textContent = 'A observação é obrigatória (mínimo 10 caracteres).';
+                messageEl.classList.remove('hidden');
+            }
+            return;
+        }
+
+        // Busca o romaneio
+        const romaneio = appData.romaneios.find(r => String(r.numero) === String(numero));
+        if (!romaneio) {
+            if (messageEl) {
+                messageEl.textContent = `Romaneio ${numero} não encontrado.`;
+                messageEl.classList.remove('hidden');
+            }
+            return;
+        }
+
+        // Apenas permite finalizar se estiver em separação
+        if (romaneio.status !== 'Em separação') {
+            if (messageEl) {
+                messageEl.textContent = `Não é possível finalizar. Status atual: ${romaneio.status}.`;
+                messageEl.classList.remove('hidden');
+            }
+            return;
+        }
+
+        // Atualiza status para Pendente de faturamento e adiciona observação + data de finalização
+        await updateRomaneioStatus(romaneio.numero, 'Pendente de faturamento', appData.currentUser.name, appData.currentRole, {
+            observacaoLider: observacao,
+            dataFinalizacaoSeparacao: new Date().toISOString()
+        });
+
+        if (messageEl) {
+            messageEl.textContent = `Romaneio ${numero} finalizado com observação.`;
+            messageEl.classList.remove('hidden');
+        }
+
+        // Limpa campos e re-renderiza views relevantes
+        inputNumero.value = '';
+        textareaObs.value = '';
+        renderSeparacao();
+        renderFaturamento();
+        renderFilaFIFO();
+        renderHistoricoCompleto();
+    });
+}
+
 // Funções de Utilidade (continuação)
 function getStatusClass(status) {
     switch (status) {
