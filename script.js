@@ -1186,3 +1186,62 @@ function calculateDelay(deliveryDate) {
     if (diffDays === 3) return { text: '3 dias', class: 'atraso-3-dias' };
     return { text: `${diffDays}+ dias`, class: 'atraso-4-mais-dias blink' };
 }
+
+// ============================
+// Exportar para Excel (SheetJS)
+// ============================
+
+function exportTableElementToExcel(tableElement, fileName) {
+    if (typeof XLSX === 'undefined') {
+        alert('Biblioteca SheetJS (XLSX) não carregada. Verifique se o script está presente no HTML.');
+        return;
+    }
+
+    try {
+        const wb = XLSX.utils.table_to_book(tableElement, { sheet: 'Sheet1' });
+        XLSX.writeFile(wb, fileName);
+    } catch (err) {
+        console.error('Erro ao exportar para Excel:', err);
+        alert('Ocorreu um erro ao gerar o arquivo Excel. Veja o console para detalhes.');
+    }
+}
+
+function getClosestTableFromTbody(tbody) {
+    if (!tbody) return null;
+    // Se o tbody estiver dentro de uma tabela, retorna a tabela mais próxima
+    if (tbody.closest) return tbody.closest('table');
+    // fallback: sobe os pais
+    let el = tbody;
+    while (el && el.nodeName !== 'TABLE') el = el.parentElement;
+    return el;
+}
+
+// Listener: Exportar fila FIFO
+const btnExportFila = document.getElementById('btn-exportar-excel');
+if (btnExportFila) {
+    btnExportFila.addEventListener('click', () => {
+        const tbody = document.getElementById('tabela-fila-fifo');
+        const table = getClosestTableFromTbody(tbody);
+        if (!table) {
+            alert('Tabela da fila não encontrada para exportação.');
+            return;
+        }
+        const fileName = `fila_fifo_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.xlsx`;
+        exportTableElementToExcel(table, fileName);
+    });
+}
+
+// Listener: Exportar histórico completo
+const btnExportHistorico = document.getElementById('btn-exportar-historico');
+if (btnExportHistorico) {
+    btnExportHistorico.addEventListener('click', () => {
+        const tbody = document.getElementById('tabela-historico-completo');
+        const table = getClosestTableFromTbody(tbody);
+        if (!table) {
+            alert('Tabela de histórico não encontrada para exportação.');
+            return;
+        }
+        const fileName = `historico_completo_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.xlsx`;
+        exportTableElementToExcel(table, fileName);
+    });
+}
