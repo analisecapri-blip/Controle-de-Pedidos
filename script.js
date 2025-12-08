@@ -954,18 +954,38 @@ async function updateRomaneioStatus(romaneioNumero, newStatus, user, role, addit
     }
 
     // Executa a atualização
+    console.debug('updateRomaneioStatus: matchById=', matchById, 'updates=', updates);
     const { data, error } = await query.select();
 
     if (error) {
         console.error('Erro ao atualizar status no Supabase:', error);
-        // Mostra erro detalhado para ajudar no debug
         const errMsg = error.message || JSON.stringify(error);
         alert(`Erro ao atualizar status do romaneio ${romaneioNumero}: ${errMsg}`);
         return;
     }
 
-    // Se a atualização no Supabase for bem-sucedida, atualiza o objeto local com o dado retornado
-    appData.romaneios[romaneioIndex] = data[0];
+    // Se a atualização não retornou dados (às vezes políticas RLS ou RETURNING não permitem), tenta buscar o registro atualizado
+    if (!data || data.length === 0) {
+        console.warn('Update retornou sem dados. Tentando buscar registro atualizado...');
+        let fetchQuery = supabaseClient.from(ROMANEIOS_TABLE).select('*');
+        if (matchById) fetchQuery = fetchQuery.eq('id', romaneio.id).limit(1);
+        else fetchQuery = fetchQuery.eq('numero', romaneioNumero).limit(1);
+        const { data: fetched, error: fetchErr } = await fetchQuery;
+        if (fetchErr) {
+            console.error('Erro ao buscar romaneio após update:', fetchErr);
+            alert(`Romaneio atualizado, mas falha ao buscar registro atualizado: ${fetchErr.message || JSON.stringify(fetchErr)}`);
+            return;
+        }
+        if (!fetched || fetched.length === 0) {
+            console.error('Nenhum registro encontrado após update. Verifique permissões e se o romaneio existe.');
+            alert('Atualização concluída, mas não foi possível obter o registro atualizado. Verifique permissões no Supabase.');
+            return;
+        }
+        appData.romaneios[romaneioIndex] = fetched[0];
+    } else {
+        // Se a atualização no Supabase retornou o registro, atualiza local
+        appData.romaneios[romaneioIndex] = data[0];
+    }
 
     // Re-renderiza as listas afetadas
     renderFilaFIFO();
