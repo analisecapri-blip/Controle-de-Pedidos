@@ -1139,29 +1139,79 @@ function renderFaturamento() {
 
 // Lógica da ABA 5 – HISTÓRICO & CONFIG (Admin)
 function renderHistoricoCompleto() {
-    const historico = appData.romaneios
+    // Aplica filtros de busca/status
+    const busca = ($('#filtro-busca-romaneio') ? $('#filtro-busca-romaneio').value.trim() : '').toLowerCase();
+    const statusFilter = ($('#filtro-status-romaneio') ? $('#filtro-status-romaneio').value : '');
+
+    const ordenados = appData.romaneios
+        .slice()
         .sort((a, b) => {
-            const aTime = a.historico[a.historico.length - 1]?.timestamp || 0;
-            const bTime = b.historico[b.historico.length - 1]?.timestamp || 0;
+            const aTime = a.historico?.[a.historico.length - 1]?.timestamp || 0;
+            const bTime = b.historico?.[b.historico.length - 1]?.timestamp || 0;
             return new Date(bTime) - new Date(aTime);
         });
 
-    const tbody = $('#tabela-historico');
+    const tbody = document.getElementById('tabela-historico-completo');
+    if (!tbody) {
+        console.warn('Elemento #tabela-historico-completo não encontrado.');
+        return;
+    }
     tbody.innerHTML = '';
 
-    historico.forEach(romaneio => {
-        const row = tbody.insertRow();
-        row.insertCell().textContent = romaneio.numero;
-        row.insertCell().textContent = new Date(romaneio.dataEntrega).toLocaleString('pt-BR');
-        row.insertCell().textContent = romaneio.status;
-        row.insertCell().textContent = romaneio.equipeDestino || '-';
-        
-        const historicoCell = row.insertCell();
-        historicoCell.innerHTML = romaneio.historico.map(h => 
-            `<div>${new Date(h.timestamp).toLocaleString('pt-BR')} - ${h.status} por ${h.user} (${h.role})</div>`
-        ).join('');
+    const results = ordenados.filter(r => {
+        if (busca) {
+            if (!String(r.numero).toLowerCase().includes(busca)) return false;
+        }
+        if (statusFilter) {
+            if (r.status !== statusFilter) return false;
+        }
+        return true;
     });
+
+    if (results.length === 0) {
+        $('#historico-completo-vazio')?.classList.remove('hidden');
+    } else {
+        $('#historico-completo-vazio')?.classList.add('hidden');
+    }
+
+    results.forEach(romaneio => {
+        const row = tbody.insertRow();
+        // Nº Romaneio
+        row.insertCell().textContent = romaneio.numero;
+        // Data/Hora Entrega
+        row.insertCell().textContent = romaneio.dataEntrega ? new Date(romaneio.dataEntrega).toLocaleString('pt-BR') : '-';
+        // Status
+        row.insertCell().textContent = romaneio.status || '-';
+
+        // Líder: procura quem iniciou a separação
+        const liderEntry = (romaneio.historico || []).slice().reverse().find(h => h.status === 'Em separação' || h.status === 'Pendente de faturamento' || h.status === 'Faturado');
+        row.insertCell().textContent = liderEntry ? (liderEntry.user || '-') : '-';
+
+        // Equipe
+        row.insertCell().textContent = romaneio.equipeDestino || '-';
+
+        // Data Finalização Separação: procura entrada com status 'Pendente de faturamento' ou campo dataFinalizacaoSeparacao
+        const finalizacaoEntry = (romaneio.historico || []).find(h => h.status === 'Pendente de faturamento' || h.dataFinalizacaoSeparacao);
+        const dataFinalizacao = finalizacaoEntry?.dataFinalizacaoSeparacao || finalizacaoEntry?.timestamp;
+        row.insertCell().textContent = dataFinalizacao ? new Date(dataFinalizacao).toLocaleString('pt-BR') : '-';
+
+        // Observação do Líder: procura em historico por observacaoLider
+        const obsEntry = (romaneio.historico || []).slice().reverse().find(h => h.observacaoLider);
+        row.insertCell().textContent = obsEntry ? obsEntry.observacaoLider : '-';
+
+        // Faturista e Data Faturamento: procura entrada com status 'Faturado'
+        const faturadoEntry = (romaneio.historico || []).find(h => h.status === 'Faturado');
+        row.insertCell().textContent = faturadoEntry ? (faturadoEntry.user || '-') : '-';
+        row.insertCell().textContent = faturadoEntry?.timestamp ? new Date(faturadoEntry.timestamp).toLocaleString('pt-BR') : '-';
+    });
+
 }
+
+// Re-renderiza historico ao alterar filtros
+const filtroBusca = document.getElementById('filtro-busca-romaneio');
+if (filtroBusca) filtroBusca.addEventListener('input', renderHistoricoCompleto);
+const filtroStatus = document.getElementById('filtro-status-romaneio');
+if (filtroStatus) filtroStatus.addEventListener('change', renderHistoricoCompleto);
 
 function renderTeamList() {
     const ul = $('#lista-teams');
