@@ -1449,3 +1449,77 @@ if (btnExportHistorico) {
         exportTableElementToExcel(table, fileName);
     });
 }
+
+// Handler: Faturar Vários romaneios via textarea
+const btnFaturarVarios = document.getElementById('btn-faturar-varios');
+if (btnFaturarVarios) {
+    btnFaturarVarios.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const textarea = document.getElementById('faturamento-input');
+        const messageEl = document.getElementById('faturamento-message');
+        if (messageEl) messageEl.classList.add('hidden');
+
+        if (!textarea) {
+            alert('Campo de faturamento não encontrado.');
+            return;
+        }
+
+        const lines = textarea.value.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        if (lines.length === 0) {
+            if (messageEl) {
+                messageEl.textContent = 'Nenhum número informado.';
+                messageEl.classList.remove('hidden');
+            }
+            return;
+        }
+
+        const results = {
+            success: [],
+            notFound: [],
+            wrongStatus: [],
+            failed: []
+        };
+
+        for (const num of lines) {
+            const romaneio = appData.romaneios.find(r => String(r.numero) === String(num));
+            if (!romaneio) {
+                results.notFound.push(num);
+                continue;
+            }
+            if (romaneio.status !== 'Pendente de faturamento') {
+                results.wrongStatus.push({ numero: num, status: romaneio.status });
+                continue;
+            }
+
+            try {
+                const ok = await updateRomaneioStatus(romaneio.numero, 'Faturado', appData.currentUser?.name || 'Sistema', appData.currentRole || 'Sistema');
+                if (ok) results.success.push(num);
+                else results.failed.push(num);
+            } catch (err) {
+                console.error('Erro ao tentar faturar romaneio', num, err);
+                results.failed.push(num);
+            }
+        }
+
+        // Feedback
+        const parts = [];
+        if (results.success.length) parts.push(`${results.success.length} faturado(s): ${results.success.join(', ')}`);
+        if (results.notFound.length) parts.push(`Não encontrados: ${results.notFound.join(', ')}`);
+        if (results.wrongStatus.length) parts.push(`Status incorreto: ${results.wrongStatus.map(r => `${r.numero}(${r.status})`).join(', ')}`);
+        if (results.failed.length) parts.push(`Falha ao faturar: ${results.failed.join(', ')}`);
+
+        const feedback = parts.length ? parts.join(' | ') : 'Nenhuma ação realizada.';
+        if (messageEl) {
+            messageEl.textContent = feedback;
+            messageEl.classList.remove('hidden');
+        } else {
+            alert(feedback);
+        }
+
+        // Limpa textarea e re-renderiza
+        textarea.value = '';
+        renderFaturamento();
+        renderHistoricoCompleto();
+        renderFilaFIFO();
+    });
+}
