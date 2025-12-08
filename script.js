@@ -13,7 +13,7 @@ let appData = {
     admin: null, // Será carregado do Supabase
     leaders: [], // Serão carregados do Supabase
     billings: [], // Serão carregados do Supabase
-    teams: ['Equipe Do Wel', 'Equipe B', 'Equipe C'], // Equipes iniciais (Pode ser migrado para Supabase se necessário)
+    teams: ['Equipe A', 'Equipe B', 'Equipe C'], // Equipes iniciais (Pode ser migrado para Supabase se necessário)
     romaneios: [], // Será populado pelo Supabase
     currentUser: null, // Salvo localmente para manter o estado de login
     currentRole: null // Salvo localmente para manter o estado de login
@@ -183,7 +183,27 @@ async function removeLeaderFromSupabase(leaderId) {
         console.error('Erro ao remover Líder do Supabase:', error);
         return false;
     }
+    // Remove do estado local
     appData.leaders = appData.leaders.filter(l => l.id !== leaderId);
+
+    // Também remove equipes que estejam associadas a esse líder (caso equipes sejam objetos com leaderId)
+    if (Array.isArray(appData.teams)) {
+        appData.teams = appData.teams.filter(team => {
+            // Se team for um objeto com leaderId, compare; se for string, mantenha
+            if (team && typeof team === 'object' && 'leaderId' in team) {
+                return team.leaderId !== leaderId;
+            }
+            return true;
+        });
+    }
+
+    // Persiste apenas o estado local relevante (login/configs e agora equipes locais)
+    try {
+        saveLocalState();
+    } catch (err) {
+        console.warn('Falha ao salvar estado local após remover líder:', err);
+    }
+
     return true;
 }
 

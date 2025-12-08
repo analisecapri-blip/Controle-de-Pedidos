@@ -407,7 +407,10 @@
                         <!-- Gerenciar Equipes -->
                         <div class="border-t pt-4">
                             <h4 class="text-lg font-medium text-blue-600 mb-3">Equipes de Destino</h4>
-                            <form id="form-add-team" class="flex gap-2 mb-4">
+                            <form id="form-add-team" class="flex gap-2 mb-4 items-center">
+                                <select id="team-leader-select" class="p-2 border border-gray-300 rounded-lg">
+                                    <option value="">Atribuir a um Líder (opcional)</option>
+                                </select>
                                 <input type="text" id="team-name-input" placeholder="Nome da Equipe" required class="p-2 border border-gray-300 rounded-lg flex-grow">
                                 <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">Adicionar</button>
                             </form>
