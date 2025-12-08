@@ -899,7 +899,7 @@ $('#btn-adicionar-romaneios').addEventListener('click', async (e) => {
 
 // Função auxiliar para encontrar e atualizar um romaneio localmente e no Supabase
 async function updateRomaneioStatus(romaneioNumero, newStatus, user, role, additionalData = {}) {
-    const romaneioIndex = appData.romaneios.findIndex(r => r.numero === romaneioNumero);
+    const romaneioIndex = appData.romaneios.findIndex(r => String(r.numero) === String(romaneioNumero));
 
     if (romaneioIndex === -1) {
         console.error(`Romaneio ${romaneioNumero} não encontrado.`);
@@ -907,39 +907,66 @@ async function updateRomaneioStatus(romaneioNumero, newStatus, user, role, addit
     }
 
     const romaneio = appData.romaneios[romaneioIndex];
-    
+
     // Cria uma cópia do histórico para evitar mutação direta antes do Supabase
-    const updatedHistorico = [...romaneio.historico, {
+    const historicoEntry = {
         timestamp: new Date().toISOString(),
         status: newStatus,
         user: user,
-        role: role,
-        ...additionalData
-    }];
+        role: role
+    };
+    // Anexa dados adicionais apenas ao histórico, para evitar enviar colunas desconhecidas ao Supabase
+    if (additionalData && typeof additionalData === 'object') {
+        Object.keys(additionalData).forEach(key => {
+            // Se o romaneio já tem essa propriedade no objeto (coluna existente), inclua também como update
+            if (romaneio.hasOwnProperty(key)) {
+                // será tratado mais abaixo
+            } else {
+                // adiciona ao histórico como detalhe
+                historicoEntry[key] = additionalData[key];
+            }
+        });
+    }
 
-    // Prepara o objeto de atualização para o Supabase
+    const updatedHistorico = [...(Array.isArray(romaneio.historico) ? romaneio.historico : []), historicoEntry];
+
+    // Prepara o objeto de atualização para o Supabase: inclui apenas colunas existentes no registro
     const updates = {
         status: newStatus,
-        historico: updatedHistorico,
-        ...additionalData
+        historico: updatedHistorico
     };
 
-    // Atualiza no Supabase
-    const { data, error } = await supabaseClient
-        .from(ROMANEIOS_TABLE)
-        .update(updates)
-        .eq('numero', romaneioNumero)
-        .select();
+    if (additionalData && typeof additionalData === 'object') {
+        Object.keys(additionalData).forEach(key => {
+            if (romaneio.hasOwnProperty(key)) {
+                updates[key] = additionalData[key];
+            }
+        });
+    }
+
+    // Decide se atualiza por id (preferível) ou por número
+    const matchById = romaneio.id !== undefined && romaneio.id !== null;
+    let query = supabaseClient.from(ROMANEIOS_TABLE).update(updates);
+    if (matchById) {
+        query = query.eq('id', romaneio.id);
+    } else {
+        query = query.eq('numero', romaneioNumero);
+    }
+
+    // Executa a atualização
+    const { data, error } = await query.select();
 
     if (error) {
         console.error('Erro ao atualizar status no Supabase:', error);
-        alert(`Erro ao atualizar status do romaneio ${romaneioNumero}.`);
+        // Mostra erro detalhado para ajudar no debug
+        const errMsg = error.message || JSON.stringify(error);
+        alert(`Erro ao atualizar status do romaneio ${romaneioNumero}: ${errMsg}`);
         return;
     }
 
     // Se a atualização no Supabase for bem-sucedida, atualiza o objeto local com o dado retornado
     appData.romaneios[romaneioIndex] = data[0];
-    
+
     // Re-renderiza as listas afetadas
     renderFilaFIFO();
     renderFaturamento();
