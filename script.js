@@ -65,6 +65,8 @@ async function loadLeadersFromSupabase() {
         appData.leaders = [];
     } else {
         appData.leaders = data;
+        // Atualiza select de líderes caso exista
+        try { populateTeamLeaderSelect(); } catch (err) { /* ignore */ }
     }
 }
 
@@ -167,6 +169,8 @@ async function saveLeaderToSupabase(leaderData) {
         return null;
     }
     appData.leaders.push(data[0]);
+    // Atualiza selects dependentes após adicionar líder
+    try { populateTeamLeaderSelect(); } catch (err) { /* ignore */ }
     return data[0];
 }
 
