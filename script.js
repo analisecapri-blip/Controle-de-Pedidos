@@ -1092,9 +1092,23 @@ function renderFilaFIFO() {
 
 // Lógica da ABA 3 – SEPARAÇÃO (Líder)
 function renderSeparacao() {
-    // Assumindo que o Líder é o nome da equipe
-    const romaneiosEmSeparacao = appData.romaneios
-        .filter(r => r.status === 'Em separação' && r.equipeDestino === appData.currentUser.name); 
+    // Mostra romaneios em separação para as equipes que o líder pode operar.
+    // Se a equipe for um objeto com leaderId, apenas o líder correspondente vê; equipes não atribuídas (strings
+    // ou objetos sem leaderId) ficam disponíveis para todos os líderes.
+    let romaneiosEmSeparacao = [];
+    if (appData.currentRole === 'Líder' && appData.currentUser && appData.currentUser.id) {
+        const allowedTeams = (appData.teams || []).filter(t => {
+            if (t && typeof t === 'object' && 'leaderId' in t) {
+                return String(t.leaderId) === String(appData.currentUser.id);
+            }
+            return true;
+        }).map(t => (t && typeof t === 'object') ? t.name : t);
+
+        romaneiosEmSeparacao = appData.romaneios
+            .filter(r => r.status === 'Em separação' && allowedTeams.includes(r.equipeDestino));
+    } else {
+        romaneiosEmSeparacao = appData.romaneios.filter(r => r.status === 'Em separação');
+    }
 
     const tbody = $('#tabela-separacao');
     tbody.innerHTML = '';
@@ -1355,11 +1369,18 @@ function renderEquipeDestinoOptions() {
         }
         select.innerHTML = '<option value="">Selecione a Equipe</option>';
 
-        // Decide quais equipes mostrar: se o select for o de separação e o usuário for Líder,
-        // mostramos apenas as equipes atribuídas a esse líder (apenas objetos com leaderId).
+        // Decide quais equipes mostrar: para o select de separação e usuário Líder,
+        // mostramos equipes atribuídas ao líder (objetos com leaderId igual ao id do líder)
+        // e também todas as equipes "gerais" (strings ou objetos sem leaderId). Isso
+        // habilita todos os líderes adicionados a utilizarem as equipes montadas.
         let teamsToShow = appData.teams || [];
         if (id === '#separacao-equipe-destino' && appData.currentRole === 'Líder' && appData.currentUser && appData.currentUser.id) {
-            teamsToShow = teamsToShow.filter(t => t && typeof t === 'object' && String(t.leaderId) === String(appData.currentUser.id));
+            teamsToShow = teamsToShow.filter(t => {
+                if (t && typeof t === 'object' && 'leaderId' in t) {
+                    return String(t.leaderId) === String(appData.currentUser.id);
+                }
+                return true;
+            });
         }
 
         teamsToShow.forEach(team => {
