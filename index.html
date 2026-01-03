@@ -113,9 +113,9 @@
 
                     <!-- Coluna direita: área para imagem/símbolo (usuário adicionará imagem) -->
                     <div class="login-right p-8 flex items-center justify-center bg-gray-50">
-                        <div id="login-image-area" class="login-image-area bg-white rounded-lg shadow-sm flex items-center justify-center">
-                            <!-- Usuário poderá substituir o conteúdo abaixo pela imagem desejada -->
-                            <span id="login-image-placeholder" class="text-gray-400 text-center px-2">Adicione sua imagem aqui</span>
+                        <div id="login-image-area" class="login-image-area bg-white rounded-lg shadow-sm flex items-center justify-center overflow-hidden">
+                            <!-- Substitua o arquivo assets/login-image.png pela sua imagem -->
+                            <img id="login-image" src="assets/login-image.png" alt="Imagem de login" class="w-full h-full object-contain" onerror="this.onerror=null;this.src='assets/image.png'">
                         </div>
                     </div>
                 </div>
