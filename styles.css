@@ -84,3 +84,100 @@ body {
     white-space: nowrap;
     cursor: help;
 }
+
+/* Layout de login dividido (imagem + formulário) */
+.login-split-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-left,
+.login-right {
+    flex: 1 1 50%;
+    min-width: 0;
+}
+
+.login-divider {
+    width: 2px; /* mais fina */
+    background-color: #0891b2; /* azul ciano padrão */
+    border-radius: 2px;
+    height: 240px; /* um pouco mais longa */
+    margin: 0 28px;
+}
+
+/* para telas pequenas empilhamos verticalmente */
+@media (max-width: 1024px) {
+    .login-split-container { flex-direction: column; padding: 24px; }
+    .login-divider { width: 40px; height: 4px; margin: 12px 0; }
+}
+
+/* Form wrapper larger on desktop */
+.login-form-wrapper {
+    max-width: 40rem; /* aumenta largura do formulário */
+}
+
+/* Área de imagem maior */
+.login-image-area {
+    width: 18rem;
+    height: 18rem;
+}
+
+@media (max-width: 1024px) {
+    .login-image-area {
+        width: 12rem;
+        height: 12rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .login-image-area { width: 100%; height: 10rem; }
+}
+
+/* Fundo do site: degradê de baixo para cima (#3282F6 -> branco) */
+html, body {
+    height: 100%;
+    background: linear-gradient(to top, #3282F6 0%, #ffffff 60%) !important;
+}
+
+/* Cartão de login com aparência flutuante e texto azul (#3282F6) */
+.login-split-container {
+    background: rgba(255,255,255,0.95);
+    box-shadow: 0 20px 50px rgba(50,130,246,0.12);
+    border: 1px solid rgba(50,130,246,0.12);
+    overflow: visible;
+}
+
+.login-left, .login-right {
+    color: #3282F6;
+}
+
+.login-left h1, .login-left p, .login-left label {
+    color: #3282F6;
+}
+
+/* Entrada e botões dentro do cartão mantêm boa legibilidade */
+#screen-login input[type="text"],
+#screen-login input[type="password"],
+#screen-login textarea {
+    color: #0b1220; /* texto escuro dentro dos inputs */
+}
+
+/* Botão de login usa o tom #3282F6 */
+#screen-login #login-unified-button {
+    background-color: #3282F6;
+    border-color: transparent;
+}
+
+/* Área de imagem com tom harmônico */
+.login-image-area {
+    background: linear-gradient(135deg, rgba(50,130,246,0.06), rgba(50,130,246,0.02));
+}
+
+/* Ajustes para garantir contraste quando empilhado em telas menores */
+@media (max-width: 1024px) {
+    .login-split-container { background: rgba(255,255,255,0.98); box-shadow: 0 12px 30px rgba(50,130,246,0.08); }
+}
+
+/* Melhora a visibilidade do texto do placeholder */
+#screen-login ::placeholder { color: rgba(11,18,32,0.45); }
