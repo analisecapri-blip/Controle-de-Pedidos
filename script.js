@@ -663,6 +663,77 @@ $$('#screen-login button[id^="tab-"]').forEach(tab => {
     });
 });
 
+// -----------------------------
+// Login Unificado (detecção automática de papel)
+// -----------------------------
+const unifiedIdentifier = $('#login-identifier');
+const unifiedPassword = $('#login-password');
+const unifiedError = $('#login-unified-error');
+
+if ($('#form-unified-login')) {
+    $('#form-unified-login').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (unifiedError) unifiedError.classList.add('hidden');
+
+        const identifier = unifiedIdentifier ? unifiedIdentifier.value.trim() : '';
+        const password = unifiedPassword ? unifiedPassword.value : '';
+
+        if (!identifier || !password) {
+            if (unifiedError) {
+                unifiedError.textContent = 'Preencha identificador e senha.';
+                unifiedError.classList.remove('hidden');
+            }
+            return;
+        }
+
+        await loadAllDataFromSupabase();
+
+        let user = null;
+        let detectedRole = null;
+
+        // 1) Tenta Admin por e-mail (case-insensitive)
+        if (appData.admin && appData.admin.email && appData.admin.passwordHash) {
+            if (String(appData.admin.email).toLowerCase() === String(identifier).toLowerCase() && appData.admin.passwordHash === hashPassword(password)) {
+                user = appData.admin;
+                detectedRole = 'Admin';
+            }
+        }
+
+        // 2) Tenta Líder por nome ou e-mail
+        if (!user && Array.isArray(appData.leaders)) {
+            user = appData.leaders.find(l => (
+                (l.name && String(l.name).toLowerCase() === String(identifier).toLowerCase()) ||
+                (l.email && String(l.email).toLowerCase() === String(identifier).toLowerCase())
+            ) && l.passwordHash === hashPassword(password));
+            if (user) detectedRole = 'Líder';
+        }
+
+        // 3) Tenta Faturamento por nome ou e-mail
+        if (!user && Array.isArray(appData.billings)) {
+            user = appData.billings.find(b => (
+                (b.name && String(b.name).toLowerCase() === String(identifier).toLowerCase()) ||
+                (b.email && String(b.email).toLowerCase() === String(identifier).toLowerCase())
+            ) && b.passwordHash === hashPassword(password));
+            if (user) detectedRole = 'Faturamento';
+        }
+
+        if (user && detectedRole) {
+            appData.currentUser = { id: user.id || null, name: user.name, email: user.email || null };
+            appData.currentRole = detectedRole;
+            saveLocalState();
+            renderDashboard();
+            showScreen('#screen-dashboard');
+        } else {
+            if (unifiedError) {
+                unifiedError.textContent = 'Identificador ou senha incorretos.';
+                unifiedError.classList.remove('hidden');
+            } else {
+                alert('Identificador ou senha incorretos.');
+            }
+        }
+    });
+}
+
 // Lógica de Configurações (continuação)
 $('#btn-settings').addEventListener('click', () => {
     $('#settings-user-name').textContent = appData.currentUser.name;
