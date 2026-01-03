@@ -100,7 +100,7 @@ body {
 
 .login-divider {
     width: 2px; /* mais fina */
-    background-color: #0891b2; /* azul ciano padrão */
+    background-color: var(--brand-color, #0891b2); /* azul ciano padrão via variável */
     border-radius: 2px;
     height: 240px; /* um pouco mais longa */
     margin: 0 28px;
@@ -134,10 +134,14 @@ body {
     .login-image-area { width: 100%; height: 10rem; }
 }
 
-/* Fundo do site: degradê de baixo para cima (#3282F6 -> branco) */
+:root{
+    --brand-color: #3282F6;
+}
+
+/* Fundo do site: degradê de baixo para cima (brand color -> branco) */
 html, body {
     height: 100%;
-    background: linear-gradient(to top, #3282F6 0%, #ffffff 60%) !important;
+    background: linear-gradient(to top, var(--brand-color) 0%, #ffffff 60%) !important;
 }
 
 /* Cartão de login com aparência flutuante e texto azul (#3282F6) */
@@ -149,11 +153,11 @@ html, body {
 }
 
 .login-left, .login-right {
-    color: #3282F6;
+    color: var(--brand-color);
 }
 
 .login-left h1, .login-left p, .login-left label {
-    color: #3282F6;
+    color: var(--brand-color);
 }
 
 /* Entrada e botões dentro do cartão mantêm boa legibilidade */
@@ -163,9 +167,9 @@ html, body {
     color: #0b1220; /* texto escuro dentro dos inputs */
 }
 
-/* Botão de login usa o tom #3282F6 */
+/* Botão de login usa o tom da brand color */
 #screen-login #login-unified-button {
-    background-color: #3282F6;
+    background-color: var(--brand-color);
     border-color: transparent;
 }
 
@@ -181,3 +185,73 @@ html, body {
 
 /* Melhora a visibilidade do texto do placeholder */
 #screen-login ::placeholder { color: rgba(11,18,32,0.45); }
+
+/* ===== Botões: aparência profissional inspirada em padrões modernos ===== */
+button, .btn, .btn-huge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1rem;
+    min-height: 44px;
+    border-radius: 0.6rem;
+    font-weight: 600;
+    border: 0;
+    cursor: pointer;
+    transition: transform .12s cubic-bezier(.2,.8,.2,1), box-shadow .15s ease, opacity .12s ease, filter .12s ease;
+    box-shadow: 0 8px 24px rgba(11,18,32,0.06);
+    font-family: inherit;
+}
+
+/* Primary: uses brand color with subtle gradient for depth */
+button.primary, button[type="submit"], .btn-primary, .btn-huge {
+    background: linear-gradient(180deg, var(--brand-color) 0%, color-mix(in srgb, var(--brand-color) 80%, #000 10%) 100%);
+    color: #fff;
+    border: 1px solid rgba(0,0,0,0.04);
+}
+
+/* If Tailwind bg classes are present, keep their color but apply shape/shadow */
+button[class*="bg-"] { box-shadow: 0 8px 24px rgba(11,18,32,0.06); border-radius: 0.6rem; }
+
+/* Secondary: light background, brand colored text */
+button.secondary, .btn-secondary, .bg-white, button.bg-white {
+    background: #ffffff;
+    color: var(--brand-color);
+    border: 1px solid rgba(11,18,32,0.06);
+}
+
+/* Ghost/outline */
+button.ghost {
+    background: transparent;
+    color: var(--brand-color);
+    border: 1px solid rgba(50,130,246,0.12);
+}
+
+/* Hover / active */
+button:hover, .btn:hover, .btn-huge:hover { transform: translateY(-3px); filter: brightness(1.03); box-shadow: 0 16px 36px rgba(11,18,32,0.08); }
+button:active, .btn:active, .btn-huge:active { transform: translateY(0); box-shadow: 0 6px 18px rgba(11,18,32,0.06); }
+
+button:focus-visible, .btn:focus-visible, .btn-huge:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--brand-color) 16%, #fff 84%);
+    outline-offset: 3px;
+}
+
+/* Dashboard tab modern look */
+.dashboard-tab {
+    border-radius: 0.6rem 0.6rem 0 0;
+    padding: 0.75rem 1.25rem;
+    box-shadow: none;
+}
+.dashboard-tab.border-cyan-600, .dashboard-tab.text-cyan-600 { color: var(--brand-color) !important; border-bottom-color: var(--brand-color) !important; }
+
+/* Login main button specific tweak */
+#screen-login #login-unified-button {
+    padding: 0.95rem 1.25rem;
+    border-radius: 0.85rem;
+    box-shadow: 0 14px 40px rgba(50,130,246,0.12);
+}
+
+/* Mobile: full-width buttons for ergonomics */
+@media (max-width: 480px) {
+    button, .btn, .btn-huge { width: 100%; padding-left: 1rem; padding-right: 1rem; }
+}

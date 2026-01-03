@@ -828,14 +828,23 @@ $('#btn-save-personalization').addEventListener('click', () => {
 // Aplicar tema ao carregar
 function applyTheme() {
     const settings = appData.appSettings || {};
-    const headerColor = settings.headerColor || '#0891b2';
+    const headerColor = settings.headerColor || '#3282F6';
     const appName = settings.appName || 'Controle de Romaneios';
     
     // Muda a cor do header
     const header = $('header');
     if (header) {
         header.style.backgroundColor = headerColor;
+        // define cor do texto do header automaticamente para contraste
+        const contrastColor = getContrastColor(headerColor);
+        header.style.color = contrastColor;
+        // atualiza variavel CSS para uso nas regras
+        document.documentElement.style.setProperty('--brand-color', headerColor);
     }
+
+    // ajusta botões e elementos que usam var(--brand-color) para garantir contraste
+    const loginButton = $('#login-unified-button');
+    if (loginButton) loginButton.style.backgroundColor = headerColor;
 
     // Muda o nome do app em todos os h1
     $$('h1').forEach(h1 => {
@@ -1561,13 +1570,7 @@ if (btnFinalizarSeparacao) {
             return;
         }
 
-        if (!observacao || observacao.length < 10) {
-            if (messageEl) {
-                messageEl.textContent = 'A observação é obrigatória (mínimo 10 caracteres).';
-                messageEl.classList.remove('hidden');
-            }
-            return;
-        }
+        // Observação é opcional: segue em branco se o líder não informar
 
         // Busca o romaneio
         const romaneio = appData.romaneios.find(r => String(r.numero) === String(numero));
@@ -1588,11 +1591,10 @@ if (btnFinalizarSeparacao) {
             return;
         }
 
-        // Atualiza status para Pendente de faturamento e adiciona observação + data de finalização
-        await updateRomaneioStatus(romaneio.numero, 'Pendente de faturamento', appData.currentUser?.name || 'Sistema', appData.currentRole || 'Sistema', {
-            observacaoLider: observacao,
-            dataFinalizacaoSeparacao: new Date().toISOString()
-        });
+        // Prepara dados adicionais: adiciona observação apenas se informada
+        const additional = { dataFinalizacaoSeparacao: new Date().toISOString() };
+        if (observacao && observacao.length > 0) additional.observacaoLider = observacao;
+        await updateRomaneioStatus(romaneio.numero, 'Pendente de faturamento', appData.currentUser?.name || 'Sistema', appData.currentRole || 'Sistema', additional);
 
         if (messageEl) {
             messageEl.textContent = `Romaneio ${numero} finalizado com observação.`;
@@ -1855,4 +1857,17 @@ function renderHistoricoFaturamento() {
         if (el) el.value = '';
         renderHistoricoFaturamento();
     });
+}
+
+// escolhe cor de contraste (preto escuro ou branco) com base na luminância do hexadecimal
+function getContrastColor(hex) {
+    if (!hex) return '#ffffff';
+    const h = hex.replace('#','');
+    const bigint = parseInt(h.length===3 ? h.split('').map(c=>c+c).join('') : h, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    // sRGB luminance
+    const lum = 0.2126 * (r/255) + 0.7152 * (g/255) + 0.0722 * (b/255);
+    return lum > 0.6 ? '#0b1220' : '#ffffff';
 }
