@@ -1489,12 +1489,12 @@ if (btnRetirar) {
             return;
         }
 
-        const numero = inputNumero.value.trim();
+        const inputText = inputNumero.value.trim();
         const equipe = selectEquipe.value;
 
-        if (!numero) {
+        if (!inputText) {
             if (messageEl) {
-                messageEl.textContent = 'Informe o número do romaneio.';
+                messageEl.textContent = 'Informe o(s) número(s) do(s) romaneio(s).';
                 messageEl.classList.remove('hidden');
             }
             return;
@@ -1508,33 +1508,59 @@ if (btnRetirar) {
             return;
         }
 
-        // Busca o romaneio
-        const romaneio = appData.romaneios.find(r => String(r.numero) === String(numero));
-        if (!romaneio) {
+        // Processa múltiplos romaneios
+        const numeros = inputText.split('\n').map(n => n.trim()).filter(n => n.length > 0);
+        
+        if (numeros.length === 0) {
             if (messageEl) {
-                messageEl.textContent = `Romaneio ${numero} não encontrado.`;
+                messageEl.textContent = 'Informe o(s) número(s) do(s) romaneio(s).';
                 messageEl.classList.remove('hidden');
             }
             return;
         }
 
-        // Só permite retirar se estiver Disponível
-        if (romaneio.status !== 'Disponível') {
-            if (messageEl) {
-                messageEl.textContent = `Romaneio ${numero} não está disponível para retirada (status: ${romaneio.status}).`;
-                messageEl.classList.remove('hidden');
+        let sucessos = [];
+        let erros = [];
+
+        for (const numero of numeros) {
+            // Busca o romaneio
+            const romaneio = appData.romaneios.find(r => String(r.numero) === String(numero));
+            
+            if (!romaneio) {
+                erros.push(`Romaneio ${numero} não encontrado`);
+                continue;
             }
-            return;
+
+            // Só permite retirar se estiver Disponível
+            if (romaneio.status !== 'Disponível') {
+                erros.push(`Romaneio ${numero}: status atual é "${romaneio.status}"`);
+                continue;
+            }
+
+            // Atualiza status no Supabase e local
+            try {
+                await updateRomaneioStatus(romaneio.numero, 'Em separação', appData.currentUser?.name || 'Sistema', appData.currentRole || 'Sistema', { equipeDestino: equipe });
+                sucessos.push(`Romaneio ${numero}`);
+            } catch (err) {
+                erros.push(`Romaneio ${numero}: erro ao atualizar`);
+            }
         }
 
-        // Atualiza status no Supabase e local
-        await updateRomaneioStatus(romaneio.numero, 'Em separação', appData.currentUser?.name || 'Sistema', appData.currentRole || 'Sistema', { equipeDestino: equipe });
+        // Feedback mensagem
+        let mensagem = '';
+        if (sucessos.length > 0) {
+            mensagem += `✓ ${sucessos.length} romaneio(s) retirado(s) com sucesso pela equipe ${equipe}.`;
+        }
+        if (erros.length > 0) {
+            if (mensagem) mensagem += ' ';
+            mensagem += `✗ Erros: ${erros.join('; ')}.`;
+        }
 
-        // Feedback e limpeza de campos
-        if (messageEl) {
-            messageEl.textContent = `Romaneio ${numero} retirado com sucesso pela equipe ${equipe}.`;
+        if (messageEl && mensagem) {
+            messageEl.textContent = mensagem;
             messageEl.classList.remove('hidden');
         }
+
         inputNumero.value = '';
         selectEquipe.value = '';
         // Re-renderizações para garantir consistência
@@ -1559,12 +1585,23 @@ if (btnFinalizarSeparacao) {
             return;
         }
 
-        const numero = inputNumero.value.trim();
+        const inputText = inputNumero.value.trim();
         const observacao = textareaObs.value.trim();
 
-        if (!numero) {
+        if (!inputText) {
             if (messageEl) {
-                messageEl.textContent = 'Informe o número do romaneio.';
+                messageEl.textContent = 'Informe o(s) número(s) do(s) romaneio(s).';
+                messageEl.classList.remove('hidden');
+            }
+            return;
+        }
+
+        // Processa múltiplos romaneios
+        const numeros = inputText.split('\n').map(n => n.trim()).filter(n => n.length > 0);
+        
+        if (numeros.length === 0) {
+            if (messageEl) {
+                messageEl.textContent = 'Informe o(s) número(s) do(s) romaneio(s).';
                 messageEl.classList.remove('hidden');
             }
             return;
@@ -1572,32 +1609,48 @@ if (btnFinalizarSeparacao) {
 
         // Observação é opcional: segue em branco se o líder não informar
 
-        // Busca o romaneio
-        const romaneio = appData.romaneios.find(r => String(r.numero) === String(numero));
-        if (!romaneio) {
-            if (messageEl) {
-                messageEl.textContent = `Romaneio ${numero} não encontrado.`;
-                messageEl.classList.remove('hidden');
+        let sucessos = [];
+        let erros = [];
+
+        for (const numero of numeros) {
+            // Busca o romaneio
+            const romaneio = appData.romaneios.find(r => String(r.numero) === String(numero));
+            
+            if (!romaneio) {
+                erros.push(`Romaneio ${numero} não encontrado`);
+                continue;
             }
-            return;
+
+            // Apenas permite finalizar se estiver em separação
+            if (romaneio.status !== 'Em separação') {
+                erros.push(`Romaneio ${numero}: status é "${romaneio.status}"`);
+                continue;
+            }
+
+            try {
+                // Prepara dados adicionais: adiciona observação apenas se informada
+                const additional = { dataFinalizacaoSeparacao: new Date().toISOString() };
+                if (observacao && observacao.length > 0) additional.observacaoLider = observacao;
+                
+                await updateRomaneioStatus(romaneio.numero, 'Pendente de faturamento', appData.currentUser?.name || 'Sistema', appData.currentRole || 'Sistema', additional);
+                sucessos.push(`Romaneio ${numero}`);
+            } catch (err) {
+                erros.push(`Romaneio ${numero}: erro ao atualizar`);
+            }
         }
 
-        // Apenas permite finalizar se estiver em separação
-        if (romaneio.status !== 'Em separação') {
-            if (messageEl) {
-                messageEl.textContent = `Não é possível finalizar. Status atual: ${romaneio.status}.`;
-                messageEl.classList.remove('hidden');
-            }
-            return;
+        // Feedback mensagem
+        let mensagem = '';
+        if (sucessos.length > 0) {
+            mensagem += `✓ ${sucessos.length} romaneio(s) finalizado(s) com sucesso.`;
+        }
+        if (erros.length > 0) {
+            if (mensagem) mensagem += ' ';
+            mensagem += `✗ Erros: ${erros.join('; ')}.`;
         }
 
-        // Prepara dados adicionais: adiciona observação apenas se informada
-        const additional = { dataFinalizacaoSeparacao: new Date().toISOString() };
-        if (observacao && observacao.length > 0) additional.observacaoLider = observacao;
-        await updateRomaneioStatus(romaneio.numero, 'Pendente de faturamento', appData.currentUser?.name || 'Sistema', appData.currentRole || 'Sistema', additional);
-
-        if (messageEl) {
-            messageEl.textContent = `Romaneio ${numero} finalizado com observação.`;
+        if (messageEl && mensagem) {
+            messageEl.textContent = mensagem;
             messageEl.classList.remove('hidden');
         }
 
