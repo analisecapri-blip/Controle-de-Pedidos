@@ -20,9 +20,6 @@
     <!-- CryptoJS para hash de senha -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
 
-    <!-- Chart.js para gráficos -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-
     <!-- Manifest PWA -->
     <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiQ29udHJvbGUgZGUgUm9tYW5laW9zIiwic2hvcnRfbmFtZSI6IlJvbWFuZWlvcyIsImRlc2NyaXB0aW9uIjoiU2lzdGVtYSBkZSBDb250cm9sZSBkZSBSb21hbmVpb3MgLSBHZXN0w6NvIEZJRk8iLCJzdGFydF91cmwiOiIuIiwgImRpc3BsYXkiOiJzdGFuZGFsb25lIiwgImJhY2tncm91bmRfY29sb3IiOiAiI2YwZjRmOCIsICJ0aGVtZV9jb2xvciI6ICIjMDg5MWIyIiwgIm9yaWVudGF0aW9uIjogInBvcnRyYWl0LXByaW1hcnkiLCAiaWNvbnMiOiBbeyJzcmMiOiJkYXRhOmltYWdlL3N2Zyt4bWwsJTNDc3ZnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zykgdmlld0JveD0nMCAwIDUxMiA1MTInJTNFJTNDcmVjdCB3aWR0aD0nNTEyJyBoZWlnaHQ9JzUxMicgZmlsbD0nJTIzMDg5MWIyJy8lM0UlM0N0ZXh0IHg9JzUwJTI1JyB5PSc1MCUyNScgZm9udC1zaXplPScyNTAnIGZvbnQtd2VpZ2h0PSdib2xkJyBmaWxsPSd3aGl0ZScgdGV4dC1hbmNob3I9J21pZGRsZScgZHk9Jy4zNWVtJyBmb250LWZhbWlseT0nc2Fucy1zZXJpZiclM0VDUiUzQy90ZXh0JTNFJTNDL3N2ZyUzRSIsICJzaXplcyI6ICI1MTJ4NTEyIiwgInR5cGUiOiJpbWFnZS9zdmcreG1sIiwgInB1cnBvc2UiOiJhbnkgbWFza2FibGUifV19">
     
@@ -307,77 +304,8 @@
                     </div>
                 </div>
 
-                <!-- ABA 5 – DASHBOARD (só admin) -->
-                <div id="tab-dashboard" class="tab-content space-y-6 hidden">
-                    <h2 class="text-2xl font-bold text-gray-800">📊 Dashboard de Análise</h2>
-                    
-                    <!-- Cards de Métricas Rápidas -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
-                            <p class="text-gray-600 text-sm font-medium">Pedidos em Separação</p>
-                            <p id="metric-em-separacao" class="text-3xl font-bold text-blue-600 mt-2">0</p>
-                        </div>
-                        <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-green-500">
-                            <p class="text-gray-600 text-sm font-medium">Pedidos Prontos (Faturados)</p>
-                            <p id="metric-faturados" class="text-3xl font-bold text-green-600 mt-2">0</p>
-                        </div>
-                        <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-yellow-500">
-                            <p class="text-gray-600 text-sm font-medium">Pendentes de Separação</p>
-                            <p id="metric-disponiveis" class="text-3xl font-bold text-yellow-600 mt-2">0</p>
-                        </div>
-                        <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-purple-500">
-                            <p class="text-gray-600 text-sm font-medium">Pendentes de Faturamento</p>
-                            <p id="metric-pendentes-fat" class="text-3xl font-bold text-purple-600 mt-2">0</p>
-                        </div>
-                    </div>
-
-                    <!-- Gráficos -->
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <!-- Distribuição por Status -->
-                        <div class="bg-white p-6 rounded-lg shadow-md">
-                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Distribuição por Status</h3>
-                            <canvas id="chart-status"></canvas>
-                        </div>
-
-                        <!-- Tempo Médio de Separação por Turno -->
-                        <div class="bg-white p-6 rounded-lg shadow-md">
-                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Tempo Médio de Separação (horas)</h3>
-                            <canvas id="chart-tempo-separacao"></canvas>
-                        </div>
-
-                        <!-- Evolução Diária de Pedidos -->
-                        <div class="bg-white p-6 rounded-lg shadow-md lg:col-span-2">
-                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Evolução Diária de Pedidos (últimos 7 dias)</h3>
-                            <canvas id="chart-evolucao-diaria"></canvas>
-                        </div>
-
-                        <!-- Pedidos por Equipe -->
-                        <div class="bg-white p-6 rounded-lg shadow-md">
-                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Pedidos por Equipe</h3>
-                            <canvas id="chart-equipes"></canvas>
-                        </div>
-                    </div>
-
-                    <!-- Tabela de Resumo -->
-                    <div class="bg-white p-6 rounded-lg shadow-md">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Resumo Geral</h3>
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200 text-sm">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th class="px-4 py-2 text-left font-medium text-gray-700">Métrica</th>
-                                        <th class="px-4 py-2 text-center font-medium text-gray-700">Valor</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="dashboard-resumo-tbody" class="divide-y divide-gray-200">
-                                    <!-- Dados serão preenchidos via JS -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ABA 6 – HISTÓRICO & CONFIG (só admin) -->
+                <!-- ABA 5 – HISTÓRICO E CONFIGURAÇÕES (só admin) -->
+                <div id="tab-historico-config" class="tab-content space-y-6 hidden">
                     <h2 class="text-2xl font-bold text-gray-800">📊 Histórico e Configurações</h2>
                     
                     <!-- Histórico Completo -->

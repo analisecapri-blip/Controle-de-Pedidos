@@ -895,7 +895,6 @@ function renderTabs() {
         { id: 'fila', title: '🚚 Fila FIFO', roles: ['Admin'] },
         { id: 'separacao', title: '📦 Separação', roles: ['Líder'] },
         { id: 'faturamento', title: '💰 Faturamento', roles: ['Faturamento'] },
-        { id: 'dashboard', title: '📊 Dashboard', roles: ['Admin'] },
         { id: 'historico-config', title: '📊 Histórico & Config', roles: ['Admin'] }
     ];
 
@@ -921,7 +920,6 @@ function renderTabs() {
                 // Renderiza o conteúdo específico da tab
                 if (tab.id === 'fila') renderFilaFIFO();
                 if (tab.id === 'faturamento') renderFaturamento();
-                if (tab.id === 'dashboard') renderDashboard();
                 if (tab.id === 'historico-config') renderHistoricoCompleto();
             });
             tabsContainer.appendChild(button);
@@ -1002,8 +1000,7 @@ $('#btn-adicionar-romaneios').addEventListener('click', async (e) => {
         messageElement.classList.add('text-green-500');
 
         // Re-renderiza a fila FIFO para mostrar os novos romaneios
-        renderFilaFIFO();
-        if (appData.currentRole === 'Admin') renderDashboard(); 
+        renderFilaFIFO(); 
     } else {
         messageElement.textContent = 'Todos os romaneios informados já existem.';
         messageElement.classList.remove('hidden', 'text-green-500');
@@ -1792,7 +1789,6 @@ if (btnRetirar) {
         // Re-renderizações para garantir consistência
         renderFilaFIFO();
         renderSeparacao();
-        if (appData.currentRole === 'Admin') renderDashboard();
     });
 }
 
@@ -1888,7 +1884,6 @@ if (btnFinalizarSeparacao) {
         renderFaturamento();
         renderFilaFIFO();
         renderHistoricoCompleto();
-        if (appData.currentRole === 'Admin') renderDashboard();
     });
 }
 
