@@ -1116,19 +1116,21 @@ function renderFilaFIFO() {
     }
 
     fila.forEach((romaneio, index) => {
-        const delay = calculateDelay(romaneio.dataEntrega);
-        const row = tbody.insertRow();
-        
-        // Aplica a classe de status na linha
-        row.className = getStatusClass(romaneio.status);
-        
-        // Se for o mais atrasado e estiver em atraso 4+, pisca
-        if (index === 0 && delay.class.includes('atraso-4-mais-dias')) {
-            row.classList.add('blink-red');
-        }
+        try {
+            const delay = calculateDelay(romaneio.dataEntrega);
+            const row = tbody.insertRow();
+            
+            // Aplica a classe de status na linha
+            row.className = getStatusClass(romaneio.status);
+            
+            // Se for o mais atrasado e estiver em atraso 4+, pisca
+            if (index === 0 && delay && delay.class && delay.class.includes('atraso-4-mais-dias')) {
+                row.classList.add('blink-red');
+            }
 
         row.insertCell().textContent = romaneio.numero;
-        row.insertCell().textContent = new Date(romaneio.dataEntrega).toLocaleString('pt-BR');
+        const dataEntrega = romaneio.dataEntrega ? new Date(romaneio.dataEntrega).toLocaleString('pt-BR') : 'Data inválida';
+        row.insertCell().textContent = dataEntrega;
         row.insertCell().textContent = romaneio.status;
         
         const delayCell = row.insertCell();
@@ -1159,6 +1161,9 @@ function renderFilaFIFO() {
             actionCell.textContent = `Em separação (${romaneio.equipeDestino || 'N/A'})`;
         } else {
             actionCell.textContent = '-';
+        }
+        } catch (err) {
+            console.error('Erro ao renderizar romaneio na fila FIFO:', err);
         }
     });
 }
@@ -1671,8 +1676,18 @@ function getStatusClass(status) {
 }
 
 function calculateDelay(deliveryDate) {
+    // Validação básica da data
+    if (!deliveryDate) {
+        return { text: 'D0', class: 'atraso-normal' };
+    }
+
     const now = new Date();
     const delivery = new Date(deliveryDate);
+    
+    // Verifica se a data é válida
+    if (isNaN(delivery.getTime())) {
+        return { text: 'D0', class: 'atraso-normal' };
+    }
     
     // Reseta horas/minutos/segundos para comparar apenas por data
     now.setHours(0, 0, 0, 0);
