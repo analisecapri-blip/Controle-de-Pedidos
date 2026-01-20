@@ -1518,12 +1518,12 @@ if (btnRetirar) {
             return;
         }
 
-        const numero = inputNumero.value.trim();
+        const texto = inputNumero.value.trim();
         const equipe = selectEquipe.value;
 
-        if (!numero) {
+        if (!texto) {
             if (messageEl) {
-                messageEl.textContent = 'Informe o número do romaneio.';
+                messageEl.textContent = 'Informe pelo menos um número de romaneio.';
                 messageEl.classList.remove('hidden');
             }
             return;
@@ -1537,35 +1537,62 @@ if (btnRetirar) {
             return;
         }
 
-        // Busca o romaneio
-        const romaneio = appData.romaneios.find(r => String(r.numero) === String(numero));
-        if (!romaneio) {
+        // Processa múltiplos romaneios (um por linha)
+        const numeros = texto.split('\n')
+            .map(n => n.trim())
+            .filter(n => n.length > 0);
+
+        if (numeros.length === 0) {
             if (messageEl) {
-                messageEl.textContent = `Romaneio ${numero} não encontrado.`;
+                messageEl.textContent = 'Nenhum número de romaneio válido encontrado.';
                 messageEl.classList.remove('hidden');
             }
             return;
         }
 
-        // Só permite retirar se estiver Disponível
-        if (romaneio.status !== 'Disponível') {
-            if (messageEl) {
-                messageEl.textContent = `Romaneio ${numero} não está disponível para retirada (status: ${romaneio.status}).`;
-                messageEl.classList.remove('hidden');
+        let sucessos = 0;
+        let erros = [];
+
+        // Processa cada romaneio
+        for (const numero of numeros) {
+            // Busca o romaneio
+            const romaneio = appData.romaneios.find(r => String(r.numero) === String(numero));
+            
+            if (!romaneio) {
+                erros.push(`Romaneio ${numero}: não encontrado`);
+                continue;
             }
-            return;
+
+            // Só permite retirar se estiver Disponível
+            if (romaneio.status !== 'Disponível') {
+                erros.push(`Romaneio ${numero}: status é "${romaneio.status}"`);
+                continue;
+            }
+
+            // Atualiza status no Supabase e local
+            await updateRomaneioStatus(romaneio.numero, 'Em separação', appData.currentUser?.name || 'Sistema', appData.currentRole || 'Sistema', { equipeDestino: equipe });
+            sucessos++;
         }
 
-        // Atualiza status no Supabase e local
-        await updateRomaneioStatus(romaneio.numero, 'Em separação', appData.currentUser?.name || 'Sistema', appData.currentRole || 'Sistema', { equipeDestino: equipe });
+        // Feedback com resumo
+        let mensagem = '';
+        if (sucessos > 0) {
+            mensagem = `✓ ${sucessos} romaneio(s) retirado(s) com sucesso pela equipe ${equipe}.`;
+        }
+        if (erros.length > 0) {
+            if (mensagem) mensagem += ` ✗ Erros: ${erros.join('; ')}`;
+            else mensagem = `✗ Erros: ${erros.join('; ')}`;
+        }
 
-        // Feedback e limpeza de campos
         if (messageEl) {
-            messageEl.textContent = `Romaneio ${numero} retirado com sucesso pela equipe ${equipe}.`;
+            messageEl.textContent = mensagem;
             messageEl.classList.remove('hidden');
         }
+        
+        // Limpeza de campos
         inputNumero.value = '';
         selectEquipe.value = '';
+        
         // Re-renderizações para garantir consistência
         renderFilaFIFO();
         renderSeparacao();
