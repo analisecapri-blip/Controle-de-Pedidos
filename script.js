@@ -1615,12 +1615,12 @@ if (btnFinalizarSeparacao) {
             return;
         }
 
-        const numero = inputNumero.value.trim();
+        const texto = inputNumero.value.trim();
         const observacao = textareaObs.value.trim();
 
-        if (!numero) {
+        if (!texto) {
             if (messageEl) {
-                messageEl.textContent = 'Informe o número do romaneio.';
+                messageEl.textContent = 'Informe pelo menos um número de romaneio.';
                 messageEl.classList.remove('hidden');
             }
             return;
@@ -1628,32 +1628,58 @@ if (btnFinalizarSeparacao) {
 
         // Observação é opcional: segue em branco se o líder não informar
 
-        // Busca o romaneio
-        const romaneio = appData.romaneios.find(r => String(r.numero) === String(numero));
-        if (!romaneio) {
+        // Processa múltiplos romaneios (um por linha)
+        const numeros = texto.split('\n')
+            .map(n => n.trim())
+            .filter(n => n.length > 0);
+
+        if (numeros.length === 0) {
             if (messageEl) {
-                messageEl.textContent = `Romaneio ${numero} não encontrado.`;
+                messageEl.textContent = 'Nenhum número de romaneio válido encontrado.';
                 messageEl.classList.remove('hidden');
             }
             return;
         }
 
-        // Apenas permite finalizar se estiver em separação
-        if (romaneio.status !== 'Em separação') {
-            if (messageEl) {
-                messageEl.textContent = `Não é possível finalizar. Status atual: ${romaneio.status}.`;
-                messageEl.classList.remove('hidden');
+        let sucessos = 0;
+        let erros = [];
+
+        // Processa cada romaneio
+        for (const numero of numeros) {
+            // Busca o romaneio
+            const romaneio = appData.romaneios.find(r => String(r.numero) === String(numero));
+            
+            if (!romaneio) {
+                erros.push(`Romaneio ${numero}: não encontrado`);
+                continue;
             }
-            return;
+
+            // Apenas permite finalizar se estiver em separação
+            if (romaneio.status !== 'Em separação') {
+                erros.push(`Romaneio ${numero}: status é "${romaneio.status}"`);
+                continue;
+            }
+
+            // Prepara dados adicionais: adiciona observação apenas se informada
+            const additional = { dataFinalizacaoSeparacao: new Date().toISOString() };
+            if (observacao && observacao.length > 0) additional.observacaoLider = observacao;
+            
+            await updateRomaneioStatus(romaneio.numero, 'Pendente de faturamento', appData.currentUser?.name || 'Sistema', appData.currentRole || 'Sistema', additional);
+            sucessos++;
         }
 
-        // Prepara dados adicionais: adiciona observação apenas se informada
-        const additional = { dataFinalizacaoSeparacao: new Date().toISOString() };
-        if (observacao && observacao.length > 0) additional.observacaoLider = observacao;
-        await updateRomaneioStatus(romaneio.numero, 'Pendente de faturamento', appData.currentUser?.name || 'Sistema', appData.currentRole || 'Sistema', additional);
+        // Feedback com resumo
+        let mensagem = '';
+        if (sucessos > 0) {
+            mensagem = `✓ ${sucessos} romaneio(s) finalizado(s) com sucesso.`;
+        }
+        if (erros.length > 0) {
+            if (mensagem) mensagem += ` ✗ Erros: ${erros.join('; ')}`;
+            else mensagem = `✗ Erros: ${erros.join('; ')}`;
+        }
 
         if (messageEl) {
-            messageEl.textContent = `Romaneio ${numero} finalizado com observação.`;
+            messageEl.textContent = mensagem;
             messageEl.classList.remove('hidden');
         }
 
