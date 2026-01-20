@@ -361,11 +361,6 @@ async function checkInitialState() {
             $('#tab-admin-login').style.display = 'none';
         }
     }
-    // Garante que o dashboard seja renderizado com os dados do Supabase se o usuário já estiver logado
-    if (appData.currentUser && appData.currentRole) {
-        renderDashboard();
-        showScreen('#screen-dashboard');
-    }
 }
 
 // Chama a função de inicialização assíncrona
@@ -442,7 +437,6 @@ if (appData.admin && appData.admin.email === email && appData.admin.passwordHash
         appData.currentUser = { id: user.id || null, name: user.name, email: user.email || null };
         appData.currentRole = role;
         saveLocalState(); // Salva o estado de login localmente
-        renderDashboard();
         showScreen('#screen-dashboard');
     } else {
         errorElement.textContent = `${role === 'Admin' ? 'E-mail' : 'Nome'} ou senha incorretos.`;
@@ -721,7 +715,6 @@ if ($('#form-unified-login')) {
             appData.currentUser = { id: user.id || null, name: user.name, email: user.email || null };
             appData.currentRole = detectedRole;
             saveLocalState();
-            renderDashboard();
             showScreen('#screen-dashboard');
         } else {
             if (unifiedError) {
@@ -1344,227 +1337,6 @@ const filtroStatus = document.getElementById('filtro-status-romaneio');
 if (filtroStatus) filtroStatus.addEventListener('change', renderHistoricoCompleto);
 
 // Função para renderizar Dashboard (apenas Admin)
-let dashboardCharts = {};
-
-function renderDashboard() {
-    if (appData.currentRole !== 'Admin') return;
-
-    // Calcula métricas
-    const metricas = {
-        emSeparacao: appData.romaneios.filter(r => r.status === 'Em separação').length,
-        faturados: appData.romaneios.filter(r => r.status === 'Faturado').length,
-        disponiveis: appData.romaneios.filter(r => r.status === 'Disponível').length,
-        pendentesFaturamento: appData.romaneios.filter(r => r.status === 'Pendente de faturamento').length
-    };
-
-    // Atualiza cards de métricas
-    document.getElementById('metric-em-separacao').textContent = metricas.emSeparacao;
-    document.getElementById('metric-faturados').textContent = metricas.faturados;
-    document.getElementById('metric-disponiveis').textContent = metricas.disponiveis;
-    document.getElementById('metric-pendentes-fat').textContent = metricas.pendentesFaturamento;
-
-    // Atualiza tabela de resumo
-    const resumoTbody = document.getElementById('dashboard-resumo-tbody');
-    if (resumoTbody) {
-        resumoTbody.innerHTML = `
-            <tr><td class="px-4 py-2">Total de Romaneios</td><td class="px-4 py-2 text-center font-semibold">${appData.romaneios.length}</td></tr>
-            <tr><td class="px-4 py-2">Em Separação</td><td class="px-4 py-2 text-center font-semibold text-blue-600">${metricas.emSeparacao}</td></tr>
-            <tr><td class="px-4 py-2">Faturados</td><td class="px-4 py-2 text-center font-semibold text-green-600">${metricas.faturados}</td></tr>
-            <tr><td class="px-4 py-2">Disponíveis</td><td class="px-4 py-2 text-center font-semibold text-yellow-600">${metricas.disponiveis}</td></tr>
-            <tr><td class="px-4 py-2">Pendentes de Faturamento</td><td class="px-4 py-2 text-center font-semibold text-purple-600">${metricas.pendentesFaturamento}</td></tr>
-        `;
-    }
-
-    // Renderiza gráficos
-    renderDashboardGraphs(metricas);
-}
-
-function renderDashboardGraphs(metricas) {
-    // Gráfico 1: Distribuição por Status
-    const ctxStatus = document.getElementById('chart-status');
-    if (ctxStatus) {
-        if (dashboardCharts.status) dashboardCharts.status.destroy();
-        
-        const statusData = {
-            'Disponível': appData.romaneios.filter(r => r.status === 'Disponível').length,
-            'Em separação': appData.romaneios.filter(r => r.status === 'Em separação').length,
-            'Pendente de faturamento': appData.romaneios.filter(r => r.status === 'Pendente de faturamento').length,
-            'Faturado': appData.romaneios.filter(r => r.status === 'Faturado').length
-        };
-
-        dashboardCharts.status = new Chart(ctxStatus, {
-            type: 'doughnut',
-            data: {
-                labels: Object.keys(statusData),
-                datasets: [{
-                    data: Object.values(statusData),
-                    backgroundColor: ['#fbbf24', '#3b82f6', '#a78bfa', '#10b981'],
-                    borderColor: '#fff',
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { position: 'bottom' },
-                    tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.parsed}` } }
-                }
-            }
-        });
-    }
-
-    // Gráfico 2: Tempo Médio de Separação por Turno
-    const ctxTempo = document.getElementById('chart-tempo-separacao');
-    if (ctxTempo) {
-        if (dashboardCharts.tempo) dashboardCharts.tempo.destroy();
-        
-        // Calcula tempo médio de separação por turno (manhã, tarde, noite)
-        const turnoData = { 'Manhã (06-14h)': [], 'Tarde (14-22h)': [], 'Noite (22-06h)': [] };
-        
-        appData.romaneios.forEach(r => {
-            const entry = (r.historico || []).find(h => h.status === 'Pendente de faturamento' || h.dataFinalizacaoSeparacao);
-            if (entry) {
-                const dataFim = new Date(entry.dataFinalizacaoSeparacao || entry.timestamp);
-                const hora = dataFim.getHours();
-                const tempoMs = dataFim - new Date(r.dataEntrega);
-                const tempoHoras = tempoMs / (1000 * 60 * 60);
-                
-                if (hora >= 6 && hora < 14) turnoData['Manhã (06-14h)'].push(tempoHoras);
-                else if (hora >= 14 && hora < 22) turnoData['Tarde (14-22h)'].push(tempoHoras);
-                else turnoData['Noite (22-06h)'].push(tempoHoras);
-            }
-        });
-
-        const mediasTurno = Object.entries(turnoData).map(([turno, tempos]) => 
-            tempos.length > 0 ? tempos.reduce((a, b) => a + b, 0) / tempos.length : 0
-        );
-
-        dashboardCharts.tempo = new Chart(ctxTempo, {
-            type: 'bar',
-            data: {
-                labels: Object.keys(turnoData),
-                datasets: [{
-                    label: 'Tempo Médio (horas)',
-                    data: mediasTurno,
-                    backgroundColor: '#06b6d4',
-                    borderColor: '#0891b2',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: { callbacks: { label: (ctx) => `${ctx.parsed.x.toFixed(2)} h` } }
-                },
-                scales: {
-                    x: { beginAtZero: true, title: { display: true, text: 'Horas' } }
-                }
-            }
-        });
-    }
-
-    // Gráfico 3: Evolução Diária (últimos 7 dias)
-    const ctxEvolucao = document.getElementById('chart-evolucao-diaria');
-    if (ctxEvolucao) {
-        if (dashboardCharts.evolucao) dashboardCharts.evolucao.destroy();
-        
-        const agora = new Date();
-        const dias = [];
-        const datasPorDia = {};
-        
-        for (let i = 6; i >= 0; i--) {
-            const data = new Date(agora);
-            data.setDate(data.getDate() - i);
-            const dataStr = data.toLocaleDateString('pt-BR', { weekday: 'short', month: 'numeric', day: 'numeric' });
-            dias.push(dataStr);
-            datasPorDia[dataStr] = { criados: 0, faturados: 0 };
-        }
-
-        appData.romaneios.forEach(r => {
-            const dataCriacao = new Date(r.dataEntrega);
-            const dataStr = dataCriacao.toLocaleDateString('pt-BR', { weekday: 'short', month: 'numeric', day: 'numeric' });
-            if (datasPorDia[dataStr]) datasPorDia[dataStr].criados++;
-
-            const entryFaturado = (r.historico || []).find(h => h.status === 'Faturado');
-            if (entryFaturado) {
-                const dataFaturamento = new Date(entryFaturado.timestamp);
-                const dataStrFat = dataFaturamento.toLocaleDateString('pt-BR', { weekday: 'short', month: 'numeric', day: 'numeric' });
-                if (datasPorDia[dataStrFat]) datasPorDia[dataStrFat].faturados++;
-            }
-        });
-
-        dashboardCharts.evolucao = new Chart(ctxEvolucao, {
-            type: 'line',
-            data: {
-                labels: dias,
-                datasets: [
-                    {
-                        label: 'Pedidos Criados',
-                        data: dias.map(d => datasPorDia[d].criados),
-                        borderColor: '#3b82f6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        tension: 0.4,
-                        fill: true
-                    },
-                    {
-                        label: 'Pedidos Faturados',
-                        data: dias.map(d => datasPorDia[d].faturados),
-                        borderColor: '#10b981',
-                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                        tension: 0.4,
-                        fill: true
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                plugins: { legend: { position: 'bottom' } },
-                scales: { y: { beginAtZero: true, title: { display: true, text: 'Quantidade' } } }
-            }
-        });
-    }
-
-    // Gráfico 4: Pedidos por Equipe
-    const ctxEquipes = document.getElementById('chart-equipes');
-    if (ctxEquipes) {
-        if (dashboardCharts.equipes) dashboardCharts.equipes.destroy();
-        
-        const equipeData = {};
-        appData.romaneios.forEach(r => {
-            const equipe = r.equipeDestino || 'Sem Atribuição';
-            equipeData[equipe] = (equipeData[equipe] || 0) + 1;
-        });
-
-        const cores = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
-        
-        dashboardCharts.equipes = new Chart(ctxEquipes, {
-            type: 'bar',
-            data: {
-                labels: Object.keys(equipeData),
-                datasets: [{
-                    label: 'Quantidade de Pedidos',
-                    data: Object.values(equipeData),
-                    backgroundColor: Object.keys(equipeData).map((_, i) => cores[i % cores.length]),
-                    borderColor: Object.keys(equipeData).map((_, i) => cores[i % cores.length]),
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                indexAxis: 'y',
-                plugins: {
-                    legend: { display: false },
-                    tooltip: { callbacks: { label: (ctx) => `${ctx.parsed.x} pedidos` } }
-                },
-                scales: {
-                    x: { beginAtZero: true, title: { display: true, text: 'Pedidos' } }
-                }
-            }
-        });
-    }
-}
 
 function renderTeamList() {
     const ul = $('#lista-equipes');
