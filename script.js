@@ -1678,14 +1678,19 @@ function getStatusClass(status) {
 function calculateDelay(deliveryDate) {
     const now = new Date();
     const delivery = new Date(deliveryDate);
-    const diffTime = now - delivery;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
-    if (diffDays <= 0) return { text: 'Normal', class: 'atraso-normal' };
-    if (diffDays === 1) return { text: '1 dia', class: 'atraso-1-dia' };
-    if (diffDays === 2) return { text: '2 dias', class: 'atraso-2-dias' };
-    if (diffDays === 3) return { text: '3 dias', class: 'atraso-3-dias' };
-    return { text: `${diffDays}+ dias`, class: 'atraso-4-mais-dias blink' };
+    // Reseta horas/minutos/segundos para comparar apenas por data
+    now.setHours(0, 0, 0, 0);
+    delivery.setHours(0, 0, 0, 0);
+    
+    const diffTime = now - delivery;
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays <= 0) return { text: 'D0', class: 'atraso-normal' };
+    if (diffDays === 1) return { text: 'D-1', class: 'atraso-1-dia' };
+    if (diffDays === 2) return { text: 'D-2', class: 'atraso-2-dias' };
+    if (diffDays === 3) return { text: 'D-3', class: 'atraso-3-dias' };
+    return { text: `D-${diffDays}`, class: 'atraso-4-mais-dias blink' };
 }
 
 // ============================
