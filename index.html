@@ -233,6 +233,13 @@
                         <label class="block text-sm font-medium text-gray-700">Números dos Romaneios (um por linha) *</label>
                         <textarea id="separacao-finalizar-romaneio" rows="4" placeholder="Digite os números de romaneios a finalizar&#10;Ex: 1001&#10;Ex: 1002" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 resize-vertical"></textarea>
                         
+                        <label class="block text-sm font-medium text-gray-700">Status dos Romaneios *</label>
+                        <select id="separacao-status-final" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                            <option value="">Selecione uma opção</option>
+                            <option value="finalizado">✓ Finalizado - Ir para Faturamento</option>
+                            <option value="redisponibilizado">↻ Redisponibilizado - Voltar à Fila</option>
+                        </select>
+                        
                         <label class="block text-sm font-medium text-gray-700">Observação do Líder (opcional)</label>
                         <textarea id="separacao-observacao-lider" rows="4" maxlength="1000" placeholder="Digite aqui observações sobre esta separação (ex: itens danificados, faltas, trocas, etc.) — opcional" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 resize-vertical"></textarea>
                         

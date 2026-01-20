@@ -1605,17 +1605,19 @@ if (btnFinalizarSeparacao) {
     btnFinalizarSeparacao.addEventListener('click', async (e) => {
         e.preventDefault();
         const inputNumero = document.getElementById('separacao-finalizar-romaneio');
+        const selectStatus = document.getElementById('separacao-status-final');
         const textareaObs = document.getElementById('separacao-observacao-lider');
         const messageEl = document.getElementById('separacao-finalizar-message');
 
         if (messageEl) messageEl.classList.add('hidden');
 
-        if (!inputNumero || !textareaObs) {
+        if (!inputNumero || !selectStatus || !textareaObs) {
             alert('Campos de finalização não encontrados na página.');
             return;
         }
 
         const texto = inputNumero.value.trim();
+        const statusOpcao = selectStatus.value;
         const observacao = textareaObs.value.trim();
 
         if (!texto) {
@@ -1626,7 +1628,16 @@ if (btnFinalizarSeparacao) {
             return;
         }
 
-        // Observação é opcional: segue em branco se o líder não informar
+        if (!statusOpcao) {
+            if (messageEl) {
+                messageEl.textContent = 'Selecione o status dos romaneios (Finalizado ou Redisponibilizado).';
+                messageEl.classList.remove('hidden');
+            }
+            return;
+        }
+
+        // Define o status final baseado na seleção
+        const statusFinal = statusOpcao === 'finalizado' ? 'Pendente de faturamento' : 'Disponível';
 
         // Processa múltiplos romaneios (um por linha)
         const numeros = texto.split('\n')
@@ -1661,17 +1672,27 @@ if (btnFinalizarSeparacao) {
             }
 
             // Prepara dados adicionais: adiciona observação apenas se informada
-            const additional = { dataFinalizacaoSeparacao: new Date().toISOString() };
-            if (observacao && observacao.length > 0) additional.observacaoLider = observacao;
+            const additional = {};
             
-            await updateRomaneioStatus(romaneio.numero, 'Pendente de faturamento', appData.currentUser?.name || 'Sistema', appData.currentRole || 'Sistema', additional);
+            // Se for finalizado, adiciona data de finalização
+            if (statusOpcao === 'finalizado') {
+                additional.dataFinalizacaoSeparacao = new Date().toISOString();
+            }
+            
+            // Adiciona observação se informada
+            if (observacao && observacao.length > 0) {
+                additional.observacaoLider = observacao;
+            }
+            
+            await updateRomaneioStatus(romaneio.numero, statusFinal, appData.currentUser?.name || 'Sistema', appData.currentRole || 'Sistema', additional);
             sucessos++;
         }
 
         // Feedback com resumo
         let mensagem = '';
         if (sucessos > 0) {
-            mensagem = `✓ ${sucessos} romaneio(s) finalizado(s) com sucesso.`;
+            const acao = statusOpcao === 'finalizado' ? 'finalizados e enviados para faturamento' : 'redisponibilizados na fila';
+            mensagem = `✓ ${sucessos} romaneio(s) ${acao} com sucesso.`;
         }
         if (erros.length > 0) {
             if (mensagem) mensagem += ` ✗ Erros: ${erros.join('; ')}`;
@@ -1685,6 +1706,7 @@ if (btnFinalizarSeparacao) {
 
         // Limpa campos e re-renderiza views relevantes
         inputNumero.value = '';
+        selectStatus.value = '';
         textareaObs.value = '';
         renderSeparacao();
         renderFaturamento();
