@@ -1,5 +1,3 @@
-index.hmtml
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -214,8 +212,8 @@ index.hmtml
                     <!-- Bloco 1: Retirar Romaneio -->
                     <div class="bg-white p-6 rounded-lg shadow-md space-y-4">
                         <h3 class="text-xl font-semibold text-blue-600">1. RETIRAR ROMANEIO</h3>
-                        <label class="block text-sm font-medium text-gray-700">Número do Romaneio *</label>
-                        <input type="text" id="separacao-retirar-romaneio" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <label class="block text-sm font-medium text-gray-700">Números dos Romaneios (um por linha) *</label>
+                        <textarea id="separacao-retirar-romaneio" rows="4" placeholder="Digite os números de romaneios que deseja retirar&#10;Ex: 1001&#10;Ex: 1002" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-vertical"></textarea>
                         
                         <label class="block text-sm font-medium text-gray-700">Equipe Destino *</label>
                         <select id="separacao-equipe-destino" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
@@ -223,7 +221,7 @@ index.hmtml
                         </select>
                         
                         <button id="btn-retirar-romaneio" class="w-full bg-blue-600 text-white py-4 rounded-lg font-semibold hover:bg-blue-700 transition btn-huge">
-                            RETIRAR
+                            RETIRAR ROMANEIOS
                         </button>
                         <p id="separacao-retirar-message" class="text-sm text-center hidden"></p>
                     </div>
@@ -232,14 +230,14 @@ index.hmtml
                     <div class="bg-white p-6 rounded-lg shadow-md space-y-4">
                         <h3 class="text-xl font-semibold text-green-600">2. FINALIZAR COM OBSERVAÇÃO</h3>
                         
-                        <label class="block text-sm font-medium text-gray-700">Número do Romaneio *</label>
-                        <input type="text" id="separacao-finalizar-romaneio" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                        <label class="block text-sm font-medium text-gray-700">Números dos Romaneios (um por linha) *</label>
+                        <textarea id="separacao-finalizar-romaneio" rows="4" placeholder="Digite os números de romaneios a finalizar&#10;Ex: 1001&#10;Ex: 1002" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 resize-vertical"></textarea>
                         
                         <label class="block text-sm font-medium text-gray-700">Observação do Líder (opcional)</label>
                         <textarea id="separacao-observacao-lider" rows="4" maxlength="1000" placeholder="Digite aqui observações sobre esta separação (ex: itens danificados, faltas, trocas, etc.) — opcional" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 resize-vertical"></textarea>
                         
                         <button id="btn-finalizar-separacao" class="w-full bg-green-600 text-white py-4 rounded-lg font-semibold hover:bg-green-700 transition btn-huge">
-                            SEPARAÇÃO CONCLUÍDA
+                            SEPARAÇÕES CONCLUÍDAS
                         </button>
                         <p id="separacao-finalizar-message" class="text-sm text-center hidden"></p>
                     </div>

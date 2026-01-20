@@ -361,6 +361,11 @@ async function checkInitialState() {
             $('#tab-admin-login').style.display = 'none';
         }
     }
+    // Garante que o dashboard seja renderizado com os dados do Supabase se o usuário já estiver logado
+    if (appData.currentUser && appData.currentRole) {
+        renderDashboard();
+        showScreen('#screen-dashboard');
+    }
 }
 
 // Chama a função de inicialização assíncrona
@@ -437,6 +442,7 @@ if (appData.admin && appData.admin.email === email && appData.admin.passwordHash
         appData.currentUser = { id: user.id || null, name: user.name, email: user.email || null };
         appData.currentRole = role;
         saveLocalState(); // Salva o estado de login localmente
+        renderDashboard();
         showScreen('#screen-dashboard');
     } else {
         errorElement.textContent = `${role === 'Admin' ? 'E-mail' : 'Nome'} ou senha incorretos.`;
@@ -444,74 +450,84 @@ if (appData.admin && appData.admin.email === email && appData.admin.passwordHash
     }
 }
 
-$('#form-admin-login').addEventListener('submit', (e) => handleLogin(e, 'Admin'));
-$('#form-leader-login').addEventListener('submit', (e) => handleLogin(e, 'Líder'));
-$('#form-billing-login').addEventListener('submit', (e) => handleLogin(e, 'Faturamento'));
+// Event listeners para os forms antigos (compatibilidade)
+if ($('#form-admin-login')) {
+    $('#form-admin-login').addEventListener('submit', (e) => handleLogin(e, 'Admin'));
+}
+if ($('#form-leader-login')) {
+    $('#form-leader-login').addEventListener('submit', (e) => handleLogin(e, 'Líder'));
+}
+if ($('#form-billing-login')) {
+    $('#form-billing-login').addEventListener('submit', (e) => handleLogin(e, 'Faturamento'));
+}
 
-$('#btn-logout').addEventListener('click', () => {
-    appData.currentUser = null;
-    appData.currentRole = null;
-    saveLocalState(); // Limpa o estado de login localmente
-    showScreen('#screen-login');
-    // Reseta para a tab Admin no login
-    $('#tab-admin-login').click();
-});
+if ($('#btn-logout')) {
+    $('#btn-logout').addEventListener('click', () => {
+        appData.currentUser = null;
+        appData.currentRole = null;
+        saveLocalState(); // Limpa o estado de login localmente
+        showScreen('#screen-login');
+        // Reseta para a tab Admin no login
+        $('#tab-admin-login').click();
+    });
+}
 
 // Lógica de Configurações (MODIFICADA PARA USAR SUPABASE PARA ADMIN)
 // ... (O restante do código de configurações, renderização e lógica de romaneios é mantido,
 // mas as funções de gerenciamento de usuários e alteração de senha do Admin são atualizadas)
 
 // Alterar Senha do Admin (MODIFICADA PARA USAR SUPABASE)
-$('#btn-save-password').addEventListener('click', async () => {
-    const currentPassword = $('#input-current-password').value;
-    const newPassword = $('#input-new-password').value;
-    const confirmPassword = $('#input-confirm-password').value;
-    const messageElement = $('#password-message');
-    messageElement.classList.add('hidden');
+if ($('#btn-save-password')) {
+    $('#btn-save-password').addEventListener('click', async () => {
+        const currentPassword = $('#input-current-password').value;
+        const newPassword = $('#input-new-password').value;
+        const confirmPassword = $('#input-confirm-password').value;
+        const messageElement = $('#password-message');
+        messageElement.classList.add('hidden');
 
-    // ... (Validações de senha mantidas)
+        // ... (Validações de senha mantidas)
 
-    if (appData.admin.passwordHash !== hashPassword(currentPassword)) {
-        messageElement.textContent = 'Senha atual incorreta.';
-        messageElement.classList.remove('hidden', 'text-green-500');
-        messageElement.classList.add('text-red-500');
-        return;
-    }
+        if (appData.admin.passwordHash !== hashPassword(currentPassword)) {
+            messageElement.textContent = 'Senha atual incorreta.';
+            messageElement.classList.remove('hidden', 'text-green-500');
+            messageElement.classList.add('text-red-500');
+            return;
+        }
 
-    // Atualiza a senha no Supabase
-    const updatedAdmin = await updateAdminInSupabase({
-        id: appData.admin.id,
-        passwordHash: hashPassword(newPassword)
+        // Atualiza a senha no Supabase
+        const updatedAdmin = await updateAdminInSupabase({
+            id: appData.admin.id,
+            passwordHash: hashPassword(newPassword)
+        });
+
+        if (updatedAdmin) {
+            messageElement.textContent = 'Senha alterada com sucesso!';
+            messageElement.classList.remove('hidden', 'text-red-500');
+            messageElement.classList.add('text-green-500');
+        } else {
+            messageElement.textContent = 'Erro ao atualizar senha no banco de dados.';
+            messageElement.classList.remove('hidden', 'text-green-500');
+            messageElement.classList.add('text-red-500');
+        }
     });
-
-    if (updatedAdmin) {
-        messageElement.textContent = 'Senha alterada com sucesso!';
-        messageElement.classList.remove('hidden', 'text-red-500');
-        messageElement.classList.add('text-green-500');
-    } else {
-        messageElement.textContent = 'Erro ao atualizar senha no banco de dados.';
-        messageElement.classList.remove('hidden', 'text-green-500');
-        messageElement.classList.add('text-red-500');
-    }
-});
+}
 
 // Funções de Gerenciamento de Usuários (MODIFICADAS PARA USAR SUPABASE)
 
 function renderLeaderList() {
-    const tbody = $('#tabela-leaders');
+    const ul = $('#lista-lideres');
     
-    // CORREÇÃO: Verifica se o elemento existe antes de manipular
-    if (!tbody) {
-        console.warn('Elemento #tabela-leaders não encontrado. Pulando renderização de líderes.');
+    // Verifica se o elemento existe antes de manipular
+    if (!ul) {
+        console.warn('Elemento #lista-lideres não encontrado. Pulando renderização de líderes.');
         return;
     }
     
-    tbody.innerHTML = '';
+    ul.innerHTML = '';
     appData.leaders.forEach((leader, index) => {
-        const row = tbody.insertRow();
-        row.insertCell().textContent = leader.name;
-        row.insertCell().textContent = leader.email;
-        const actionCell = row.insertCell();
+        const li = document.createElement('li');
+        li.className = 'flex justify-between items-center p-2 border-b';
+        li.innerHTML = `<span>${leader.name} (${leader.email})</span>`;
         const btnRemove = document.createElement('button');
         btnRemove.textContent = 'Remover';
         btnRemove.className = 'bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded text-sm';
@@ -522,59 +538,60 @@ function renderLeaderList() {
                 alert('Erro ao remover líder.');
             }
         });
-        actionCell.appendChild(btnRemove);
+        li.appendChild(btnRemove);
+        ul.appendChild(li);
     });
 }
 
-$('#form-add-leader').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const nameInput = $('#leader-name-input');
-    const passwordInput = $('#leader-password-input');
-    
-    // Verifica se os elementos existem
-    if (!nameInput || !passwordInput) {
-        console.error('Erro: Campos de Nome ou Senha do Líder não encontrados no HTML.');
-        return;
-    }
-
-    const name = nameInput.value.trim();
-    const password = passwordInput.value;
-    // Gera um email padrão, pois o campo de email não existe no HTML
-    const email = `${name.toLowerCase().replace(/\s/g, '.')}@lider.com`;
-    
-    if (name && password.length >= 6) {
-        const newLeader = {
-            name: name,
-            email: email,
-            passwordHash: hashPassword(password)
-        };
+if ($('#form-add-leader')) {
+    $('#form-add-leader').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const nameInput = $('#leader-name-input');
+        const passwordInput = $('#leader-password-input');
         
-        if (await saveLeaderToSupabase(newLeader)) {
-            renderLeaderList();
-            $('#leader-name').value = '';
-            $('#leader-email').value = '';
-            $('#leader-password').value = '';
-        } else {
-            alert('Erro ao adicionar líder.');
+        // Verifica se os elementos existem
+        if (!nameInput || !passwordInput) {
+            console.error('Erro: Campos de Nome ou Senha do Líder não encontrados no HTML.');
+            return;
         }
-    }
-});
+
+        const name = nameInput.value.trim();
+        const password = passwordInput.value;
+        // Gera um email padrão, pois o campo de email não existe no HTML
+        const email = `${name.toLowerCase().replace(/\s/g, '.')}@lider.com`;
+        
+        if (name && password.length >= 6) {
+            const newLeader = {
+                name: name,
+                email: email,
+                passwordHash: hashPassword(password)
+            };
+            
+            if (await saveLeaderToSupabase(newLeader)) {
+                renderLeaderList();
+                nameInput.value = '';
+                passwordInput.value = '';
+            } else {
+                alert('Erro ao adicionar líder.');
+            }
+        }
+    });
+}
 
 function renderBillingList() {
-    const tbody = $('#tabela-billings');
+    const ul = $('#lista-faturistas');
     
-    // CORREÇÃO: Verifica se o elemento existe antes de manipular
-    if (!tbody) {
-        console.warn('Elemento #tabela-billings não encontrado. Pulando renderização de faturamentos.');
+    // Verifica se o elemento existe antes de manipular
+    if (!ul) {
+        console.warn('Elemento #lista-faturistas não encontrado. Pulando renderização de faturamentos.');
         return;
     }
     
-    tbody.innerHTML = '';
+    ul.innerHTML = '';
     appData.billings.forEach((billing, index) => {
-        const row = tbody.insertRow();
-        row.insertCell().textContent = billing.name;
-        row.insertCell().textContent = billing.email;
-        const actionCell = row.insertCell();
+        const li = document.createElement('li');
+        li.className = 'flex justify-between items-center p-2 border-b';
+        li.innerHTML = `<span>${billing.name} (${billing.email})</span>`;
         const btnRemove = document.createElement('button');
         btnRemove.textContent = 'Remover';
         btnRemove.className = 'bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded text-sm';
@@ -585,43 +602,45 @@ function renderBillingList() {
                 alert('Erro ao remover faturamento.');
             }
         });
-        actionCell.appendChild(btnRemove);
+        li.appendChild(btnRemove);
+        ul.appendChild(li);
     });
 }
 
-$('#form-add-billing').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const nameInput = $('#billing-name-input');
-    const passwordInput = $('#billing-password-input');
-    
-    // Verifica se os elementos existem
-    if (!nameInput || !passwordInput) {
-        console.error('Erro: Campos de Nome ou Senha do Faturamento não encontrados no HTML.');
-        return;
-    }
-
-    const name = nameInput.value.trim();
-    const password = passwordInput.value;
-    // Gera um email padrão, pois o campo de email não existe no HTML
-    const email = `${name.toLowerCase().replace(/\s/g, '.')}@faturamento.com`;
-    
-    if (name && password.length >= 6) {
-        const newBilling = {
-            name: name,
-            email: email,
-            passwordHash: hashPassword(password)
-        };
+if ($('#form-add-billing')) {
+    $('#form-add-billing').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const nameInput = $('#billing-name-input');
+        const passwordInput = $('#billing-password-input');
         
-        if (await saveBillingToSupabase(newBilling)) {
-            renderBillingList();
-            $('#billing-name').value = '';
-            $('#billing-email').value = '';
-            $('#billing-password').value = '';
-        } else {
-            alert('Erro ao adicionar faturamento.');
+        // Verifica se os elementos existem
+        if (!nameInput || !passwordInput) {
+            console.error('Erro: Campos de Nome ou Senha do Faturamento não encontrados no HTML.');
+            return;
         }
-    }
-});
+
+        const name = nameInput.value.trim();
+        const password = passwordInput.value;
+        // Gera um email padrão, pois o campo de email não existe no HTML
+        const email = `${name.toLowerCase().replace(/\s/g, '.')}@faturamento.com`;
+        
+        if (name && password.length >= 6) {
+            const newBilling = {
+                name: name,
+                email: email,
+                passwordHash: hashPassword(password)
+            };
+            
+            if (await saveBillingToSupabase(newBilling)) {
+                renderBillingList();
+                nameInput.value = '';
+                passwordInput.value = '';
+            } else {
+                alert('Erro ao adicionar faturamento.');
+            }
+        }
+    });
+}
 
 // ... (O restante do código de renderização e lógica de romaneios é mantido)
 
@@ -715,6 +734,7 @@ if ($('#form-unified-login')) {
             appData.currentUser = { id: user.id || null, name: user.name, email: user.email || null };
             appData.currentRole = detectedRole;
             saveLocalState();
+            renderDashboard();
             showScreen('#screen-dashboard');
         } else {
             if (unifiedError) {
@@ -728,95 +748,109 @@ if ($('#form-unified-login')) {
 }
 
 // Lógica de Configurações (continuação)
-$('#btn-settings').addEventListener('click', () => {
-    $('#settings-user-name').textContent = appData.currentUser.name;
-    $('#settings-user-role').textContent = appData.currentRole;
+if ($('#btn-settings')) {
+    $('#btn-settings').addEventListener('click', () => {
+        $('#settings-user-name').textContent = appData.currentUser.name;
+        $('#settings-user-role').textContent = appData.currentRole;
 
-    // Mostra as seções apenas para Admin
-    if (appData.currentRole === 'Admin') {
-        $('#settings-change-password').classList.remove('hidden');
-        $('#settings-personalization').classList.remove('hidden');
-        // Carrega as configurações salvas
-        if (appData.appSettings) {
-            $('#input-app-name').value = appData.appSettings.appName || 'Controle de Romaneios';
-            $('#input-header-color').value = appData.appSettings.headerColor || '#0891b2';
-            $('#select-header-color').value = appData.appSettings.headerColor || '#0891b2';
-            if (appData.appSettings.logoBase64) {
-                $('#logo-preview-img').src = appData.appSettings.logoBase64;
-                $('#logo-preview-img').classList.remove('hidden');
-                $('#logo-preview-text').classList.add('hidden');
+        // Mostra as seções apenas para Admin
+        if (appData.currentRole === 'Admin') {
+            $('#settings-change-password').classList.remove('hidden');
+            $('#settings-personalization').classList.remove('hidden');
+            // Carrega as configurações salvas
+            if (appData.appSettings) {
+                $('#input-app-name').value = appData.appSettings.appName || 'Controle de Romaneios';
+                $('#input-header-color').value = appData.appSettings.headerColor || '#0891b2';
+                $('#select-header-color').value = appData.appSettings.headerColor || '#0891b2';
+                if (appData.appSettings.logoBase64) {
+                    $('#logo-preview-img').src = appData.appSettings.logoBase64;
+                    $('#logo-preview-img').classList.remove('hidden');
+                    $('#logo-preview-text').classList.add('hidden');
+                }
             }
+            // Limpa os campos de senha
+            $('#input-current-password').value = '';
+            $('#input-new-password').value = '';
+            $('#input-confirm-password').value = '';
+            $('#password-message').classList.add('hidden');
+        } else {
+            $('#settings-change-password').classList.add('hidden');
+            $('#settings-personalization').classList.add('hidden');
         }
-        // Limpa os campos de senha
-        $('#input-current-password').value = '';
-        $('#input-new-password').value = '';
-        $('#input-confirm-password').value = '';
-        $('#password-message').classList.add('hidden');
-    } else {
-        $('#settings-change-password').classList.add('hidden');
-        $('#settings-personalization').classList.add('hidden');
-    }
 
-    $('#modal-settings').classList.remove('hidden');
-});
+        $('#modal-settings').classList.remove('hidden');
+    });
+}
 
-$('#btn-close-settings').addEventListener('click', () => {
-    $('#modal-settings').classList.add('hidden');
-});
-
-$('#modal-settings').addEventListener('click', (e) => {
-    if (e.target === $('#modal-settings')) {
+if ($('#btn-close-settings')) {
+    $('#btn-close-settings').addEventListener('click', () => {
         $('#modal-settings').classList.add('hidden');
-    }
-});
+    });
+}
+
+if ($('#modal-settings')) {
+    $('#modal-settings').addEventListener('click', (e) => {
+        if (e.target === $('#modal-settings')) {
+            $('#modal-settings').classList.add('hidden');
+        }
+    });
+}
 
 // Upload de Logo
-$('#btn-upload-logo').addEventListener('click', () => {
-    const fileInput = $('#input-logo');
-    const file = fileInput.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const base64 = e.target.result;
-            if (!appData.appSettings) appData.appSettings = {};
-            appData.appSettings.logoBase64 = base64;
-            $('#logo-preview-img').src = base64;
-            $('#logo-preview-img').classList.remove('hidden');
-            $('#logo-preview-text').classList.add('hidden');
-            saveLocalState(); // Salva localmente
-            applyTheme();
-            alert('Logo carregado com sucesso!');
-        };
-        reader.readAsDataURL(file);
-    } else {
-        alert('Selecione um arquivo de imagem.');
-    }
-});
+if ($('#btn-upload-logo')) {
+    $('#btn-upload-logo').addEventListener('click', () => {
+        const fileInput = $('#input-logo');
+        const file = fileInput.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const base64 = e.target.result;
+                if (!appData.appSettings) appData.appSettings = {};
+                appData.appSettings.logoBase64 = base64;
+                $('#logo-preview-img').src = base64;
+                $('#logo-preview-img').classList.remove('hidden');
+                $('#logo-preview-text').classList.add('hidden');
+                saveLocalState(); // Salva localmente
+                applyTheme();
+                alert('Logo carregado com sucesso!');
+            };
+            reader.readAsDataURL(file);
+        } else {
+            alert('Selecione um arquivo de imagem.');
+        }
+    });
+}
 
 // Mudar cor do Header
-$('#select-header-color').addEventListener('change', (e) => {
-    $('#input-header-color').value = e.target.value;
-});
+if ($('#select-header-color')) {
+    $('#select-header-color').addEventListener('change', (e) => {
+        $('#input-header-color').value = e.target.value;
+    });
+}
 
-$('#input-header-color').addEventListener('change', (e) => {
-    $('#select-header-color').value = e.target.value;
-});
+if ($('#input-header-color')) {
+    $('#input-header-color').addEventListener('change', (e) => {
+        $('#select-header-color').value = e.target.value;
+    });
+}
 
 // Salvar Personalização
-$('#btn-save-personalization').addEventListener('click', () => {
-    if (!appData.appSettings) appData.appSettings = {};
-    appData.appSettings.appName = $('#input-app-name').value || 'Controle de Romaneios';
-    appData.appSettings.headerColor = $('#input-header-color').value || '#0891b2';
-    saveLocalState(); // Salva localmente
-    applyTheme();
-    const messageElement = $('#personalization-message');
-    messageElement.textContent = 'Personalização salva com sucesso!';
-    messageElement.classList.remove('hidden', 'text-red-500');
-    messageElement.classList.add('text-green-500');
-    setTimeout(() => {
-        messageElement.classList.add('hidden');
-    }, 3000);
-});
+if ($('#btn-save-personalization')) {
+    $('#btn-save-personalization').addEventListener('click', () => {
+        if (!appData.appSettings) appData.appSettings = {};
+        appData.appSettings.appName = $('#input-app-name').value || 'Controle de Romaneios';
+        appData.appSettings.headerColor = $('#input-header-color').value || '#0891b2';
+        saveLocalState(); // Salva localmente
+        applyTheme();
+        const messageElement = $('#personalization-message');
+        messageElement.textContent = 'Personalização salva com sucesso!';
+        messageElement.classList.remove('hidden', 'text-red-500');
+        messageElement.classList.add('text-green-500');
+        setTimeout(() => {
+            messageElement.classList.add('hidden');
+        }, 3000);
+    });
+}
 
 // Aplicar tema ao carregar
 function applyTheme() {
@@ -921,62 +955,63 @@ function renderTabs() {
 }
 
 // Lógica da ABA 1 – ABASTECIMENTO (mantida)
-$('#btn-adicionar-romaneios').addEventListener('click', async (e) => {
-    e.preventDefault();
+if ($('#btn-adicionar-romaneios')) {
+    $('#btn-adicionar-romaneios').addEventListener('click', async (e) => {
+        e.preventDefault();
 
-    const romaneiosText = $('#romaneios-input').value.trim();
-    const dataEntrega = $('#data-entrega-input').value;
-    const messageElement = $('#abastecimento-message');
-    messageElement.classList.add('hidden');
+        const romaneiosText = $('#romaneios-input').value.trim();
+        const dataEntrega = $('#data-entrega-input').value;
+        const messageElement = $('#abastecimento-message');
+        messageElement.classList.add('hidden');
 
-    if (!romaneiosText || !dataEntrega) {
-        messageElement.textContent = 'Preencha todos os campos.';
-        messageElement.classList.remove('hidden', 'text-green-500');
-        messageElement.classList.add('text-red-500');
-        return;
-    }
-
-    const romaneios = romaneiosText.split('\n')
-        .map(r => r.trim())
-        .filter(r => r.length > 0);
-
-    if (romaneios.length === 0) {
-        messageElement.textContent = 'Nenhum número de romaneio válido encontrado.';
-        messageElement.classList.remove('hidden', 'text-green-500');
-        messageElement.classList.add('text-red-500');
-        return;
-    }
-
-    let addedCount = 0;
-    const romaneiosParaInserir = [];
-
-    romaneios.forEach(num => {
-        if (!appData.romaneios.find(r => r.numero === num)) {
-            romaneiosParaInserir.push({
-                numero: num,
-                dataEntrega: dataEntrega,
-                status: 'Disponível',
-                historico: [{
-                    timestamp: new Date().toISOString(),
-                    status: 'Disponível',
-                    user: appData.currentUser.name,
-                    role: appData.currentRole
-                }]
-            });
-            addedCount++;
+        if (!romaneiosText || !dataEntrega) {
+            messageElement.textContent = 'Preencha todos os campos.';
+            messageElement.classList.remove('hidden', 'text-green-500');
+            messageElement.classList.add('text-red-500');
+            return;
         }
-    });
 
-    if (romaneiosParaInserir.length > 0) {
-        // Inserção em lote no Supabase
-        const { data, error } = await supabaseClient
-            .from(ROMANEIOS_TABLE)
-            .insert(romaneiosParaInserir)
-            .select();
+        const romaneios = romaneiosText.split('\n')
+            .map(r => r.trim())
+            .filter(r => r.length > 0);
 
-        if (error) {
-            console.error('Erro ao inserir romaneios em lote:', error);
-            messageElement.textContent = `Erro ao adicionar romaneios: ${error.message}`;
+        if (romaneios.length === 0) {
+            messageElement.textContent = 'Nenhum número de romaneio válido encontrado.';
+            messageElement.classList.remove('hidden', 'text-green-500');
+            messageElement.classList.add('text-red-500');
+            return;
+        }
+
+        let addedCount = 0;
+        const romaneiosParaInserir = [];
+
+        romaneios.forEach(num => {
+            if (!appData.romaneios.find(r => r.numero === num)) {
+                romaneiosParaInserir.push({
+                    numero: num,
+                    dataEntrega: dataEntrega,
+                    status: 'Disponível',
+                    historico: [{
+                        timestamp: new Date().toISOString(),
+                        status: 'Disponível',
+                        user: appData.currentUser.name,
+                        role: appData.currentRole
+                    }]
+                });
+                addedCount++;
+            }
+        });
+
+        if (romaneiosParaInserir.length > 0) {
+            // Inserção em lote no Supabase
+            const { data, error } = await supabaseClient
+                .from(ROMANEIOS_TABLE)
+                .insert(romaneiosParaInserir)
+                .select();
+
+            if (error) {
+                console.error('Erro ao inserir romaneios em lote:', error);
+                messageElement.textContent = `Erro ao adicionar romaneios: ${error.message}`;
             messageElement.classList.remove('hidden', 'text-green-500');
             messageElement.classList.add('text-red-500');
             return;
@@ -999,7 +1034,8 @@ $('#btn-adicionar-romaneios').addEventListener('click', async (e) => {
         messageElement.classList.remove('hidden', 'text-green-500');
         messageElement.classList.add('text-red-500');
     }
-});
+    });
+}
 
 // Função auxiliar para encontrar e atualizar um romaneio localmente e no Supabase
 async function updateRomaneioStatus(romaneioNumero, newStatus, user, role, additionalData = {}) {
@@ -1116,21 +1152,19 @@ function renderFilaFIFO() {
     }
 
     fila.forEach((romaneio, index) => {
-        try {
-            const delay = calculateDelay(romaneio.dataEntrega);
-            const row = tbody.insertRow();
-            
-            // Aplica a classe de status na linha
-            row.className = getStatusClass(romaneio.status);
-            
-            // Se for o mais atrasado e estiver em atraso 4+, pisca
-            if (index === 0 && delay && delay.class && delay.class.includes('atraso-4-mais-dias')) {
-                row.classList.add('blink-red');
-            }
+        const delay = calculateDelay(romaneio.dataEntrega);
+        const row = tbody.insertRow();
+        
+        // Aplica a classe de status na linha
+        row.className = getStatusClass(romaneio.status);
+        
+        // Se for o mais atrasado e estiver em atraso 4+, pisca
+        if (index === 0 && delay.class.includes('atraso-4-mais-dias')) {
+            row.classList.add('blink-red');
+        }
 
         row.insertCell().textContent = romaneio.numero;
-        const dataEntrega = romaneio.dataEntrega ? new Date(romaneio.dataEntrega).toLocaleString('pt-BR') : 'Data inválida';
-        row.insertCell().textContent = dataEntrega;
+        row.insertCell().textContent = new Date(romaneio.dataEntrega).toLocaleString('pt-BR');
         row.insertCell().textContent = romaneio.status;
         
         const delayCell = row.insertCell();
@@ -1161,9 +1195,6 @@ function renderFilaFIFO() {
             actionCell.textContent = `Em separação (${romaneio.equipeDestino || 'N/A'})`;
         } else {
             actionCell.textContent = '-';
-        }
-        } catch (err) {
-            console.error('Erro ao renderizar romaneio na fila FIFO:', err);
         }
     });
 }
@@ -1341,8 +1372,6 @@ if (filtroBusca) filtroBusca.addEventListener('input', renderHistoricoCompleto);
 const filtroStatus = document.getElementById('filtro-status-romaneio');
 if (filtroStatus) filtroStatus.addEventListener('change', renderHistoricoCompleto);
 
-// Função para renderizar Dashboard (apenas Admin)
-
 function renderTeamList() {
     const ul = $('#lista-equipes');
     // Verifica se o elemento existe antes de manipular
@@ -1489,12 +1518,12 @@ if (btnRetirar) {
             return;
         }
 
-        const inputText = inputNumero.value.trim();
+        const numero = inputNumero.value.trim();
         const equipe = selectEquipe.value;
 
-        if (!inputText) {
+        if (!numero) {
             if (messageEl) {
-                messageEl.textContent = 'Informe o(s) número(s) do(s) romaneio(s).';
+                messageEl.textContent = 'Informe o número do romaneio.';
                 messageEl.classList.remove('hidden');
             }
             return;
@@ -1508,59 +1537,33 @@ if (btnRetirar) {
             return;
         }
 
-        // Processa múltiplos romaneios
-        const numeros = inputText.split('\n').map(n => n.trim()).filter(n => n.length > 0);
-        
-        if (numeros.length === 0) {
+        // Busca o romaneio
+        const romaneio = appData.romaneios.find(r => String(r.numero) === String(numero));
+        if (!romaneio) {
             if (messageEl) {
-                messageEl.textContent = 'Informe o(s) número(s) do(s) romaneio(s).';
+                messageEl.textContent = `Romaneio ${numero} não encontrado.`;
                 messageEl.classList.remove('hidden');
             }
             return;
         }
 
-        let sucessos = [];
-        let erros = [];
-
-        for (const numero of numeros) {
-            // Busca o romaneio
-            const romaneio = appData.romaneios.find(r => String(r.numero) === String(numero));
-            
-            if (!romaneio) {
-                erros.push(`Romaneio ${numero} não encontrado`);
-                continue;
+        // Só permite retirar se estiver Disponível
+        if (romaneio.status !== 'Disponível') {
+            if (messageEl) {
+                messageEl.textContent = `Romaneio ${numero} não está disponível para retirada (status: ${romaneio.status}).`;
+                messageEl.classList.remove('hidden');
             }
-
-            // Só permite retirar se estiver Disponível
-            if (romaneio.status !== 'Disponível') {
-                erros.push(`Romaneio ${numero}: status atual é "${romaneio.status}"`);
-                continue;
-            }
-
-            // Atualiza status no Supabase e local
-            try {
-                await updateRomaneioStatus(romaneio.numero, 'Em separação', appData.currentUser?.name || 'Sistema', appData.currentRole || 'Sistema', { equipeDestino: equipe });
-                sucessos.push(`Romaneio ${numero}`);
-            } catch (err) {
-                erros.push(`Romaneio ${numero}: erro ao atualizar`);
-            }
+            return;
         }
 
-        // Feedback mensagem
-        let mensagem = '';
-        if (sucessos.length > 0) {
-            mensagem += `✓ ${sucessos.length} romaneio(s) retirado(s) com sucesso pela equipe ${equipe}.`;
-        }
-        if (erros.length > 0) {
-            if (mensagem) mensagem += ' ';
-            mensagem += `✗ Erros: ${erros.join('; ')}.`;
-        }
+        // Atualiza status no Supabase e local
+        await updateRomaneioStatus(romaneio.numero, 'Em separação', appData.currentUser?.name || 'Sistema', appData.currentRole || 'Sistema', { equipeDestino: equipe });
 
-        if (messageEl && mensagem) {
-            messageEl.textContent = mensagem;
+        // Feedback e limpeza de campos
+        if (messageEl) {
+            messageEl.textContent = `Romaneio ${numero} retirado com sucesso pela equipe ${equipe}.`;
             messageEl.classList.remove('hidden');
         }
-
         inputNumero.value = '';
         selectEquipe.value = '';
         // Re-renderizações para garantir consistência
@@ -1585,23 +1588,12 @@ if (btnFinalizarSeparacao) {
             return;
         }
 
-        const inputText = inputNumero.value.trim();
+        const numero = inputNumero.value.trim();
         const observacao = textareaObs.value.trim();
 
-        if (!inputText) {
+        if (!numero) {
             if (messageEl) {
-                messageEl.textContent = 'Informe o(s) número(s) do(s) romaneio(s).';
-                messageEl.classList.remove('hidden');
-            }
-            return;
-        }
-
-        // Processa múltiplos romaneios
-        const numeros = inputText.split('\n').map(n => n.trim()).filter(n => n.length > 0);
-        
-        if (numeros.length === 0) {
-            if (messageEl) {
-                messageEl.textContent = 'Informe o(s) número(s) do(s) romaneio(s).';
+                messageEl.textContent = 'Informe o número do romaneio.';
                 messageEl.classList.remove('hidden');
             }
             return;
@@ -1609,48 +1601,32 @@ if (btnFinalizarSeparacao) {
 
         // Observação é opcional: segue em branco se o líder não informar
 
-        let sucessos = [];
-        let erros = [];
-
-        for (const numero of numeros) {
-            // Busca o romaneio
-            const romaneio = appData.romaneios.find(r => String(r.numero) === String(numero));
-            
-            if (!romaneio) {
-                erros.push(`Romaneio ${numero} não encontrado`);
-                continue;
+        // Busca o romaneio
+        const romaneio = appData.romaneios.find(r => String(r.numero) === String(numero));
+        if (!romaneio) {
+            if (messageEl) {
+                messageEl.textContent = `Romaneio ${numero} não encontrado.`;
+                messageEl.classList.remove('hidden');
             }
-
-            // Apenas permite finalizar se estiver em separação
-            if (romaneio.status !== 'Em separação') {
-                erros.push(`Romaneio ${numero}: status é "${romaneio.status}"`);
-                continue;
-            }
-
-            try {
-                // Prepara dados adicionais: adiciona observação apenas se informada
-                const additional = { dataFinalizacaoSeparacao: new Date().toISOString() };
-                if (observacao && observacao.length > 0) additional.observacaoLider = observacao;
-                
-                await updateRomaneioStatus(romaneio.numero, 'Pendente de faturamento', appData.currentUser?.name || 'Sistema', appData.currentRole || 'Sistema', additional);
-                sucessos.push(`Romaneio ${numero}`);
-            } catch (err) {
-                erros.push(`Romaneio ${numero}: erro ao atualizar`);
-            }
+            return;
         }
 
-        // Feedback mensagem
-        let mensagem = '';
-        if (sucessos.length > 0) {
-            mensagem += `✓ ${sucessos.length} romaneio(s) finalizado(s) com sucesso.`;
-        }
-        if (erros.length > 0) {
-            if (mensagem) mensagem += ' ';
-            mensagem += `✗ Erros: ${erros.join('; ')}.`;
+        // Apenas permite finalizar se estiver em separação
+        if (romaneio.status !== 'Em separação') {
+            if (messageEl) {
+                messageEl.textContent = `Não é possível finalizar. Status atual: ${romaneio.status}.`;
+                messageEl.classList.remove('hidden');
+            }
+            return;
         }
 
-        if (messageEl && mensagem) {
-            messageEl.textContent = mensagem;
+        // Prepara dados adicionais: adiciona observação apenas se informada
+        const additional = { dataFinalizacaoSeparacao: new Date().toISOString() };
+        if (observacao && observacao.length > 0) additional.observacaoLider = observacao;
+        await updateRomaneioStatus(romaneio.numero, 'Pendente de faturamento', appData.currentUser?.name || 'Sistema', appData.currentRole || 'Sistema', additional);
+
+        if (messageEl) {
+            messageEl.textContent = `Romaneio ${numero} finalizado com observação.`;
             messageEl.classList.remove('hidden');
         }
 
@@ -1676,31 +1652,16 @@ function getStatusClass(status) {
 }
 
 function calculateDelay(deliveryDate) {
-    // Validação básica da data
-    if (!deliveryDate) {
-        return { text: 'D0', class: 'atraso-normal' };
-    }
-
     const now = new Date();
     const delivery = new Date(deliveryDate);
-    
-    // Verifica se a data é válida
-    if (isNaN(delivery.getTime())) {
-        return { text: 'D0', class: 'atraso-normal' };
-    }
-    
-    // Reseta horas/minutos/segundos para comparar apenas por data
-    now.setHours(0, 0, 0, 0);
-    delivery.setHours(0, 0, 0, 0);
-    
     const diffTime = now - delivery;
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
-    if (diffDays <= 0) return { text: 'D0', class: 'atraso-normal' };
-    if (diffDays === 1) return { text: 'D-1', class: 'atraso-1-dia' };
-    if (diffDays === 2) return { text: 'D-2', class: 'atraso-2-dias' };
-    if (diffDays === 3) return { text: 'D-3', class: 'atraso-3-dias' };
-    return { text: `D-${diffDays}`, class: 'atraso-4-mais-dias blink' };
+    if (diffDays <= 0) return { text: 'Normal', class: 'atraso-normal' };
+    if (diffDays === 1) return { text: '1 dia', class: 'atraso-1-dia' };
+    if (diffDays === 2) return { text: '2 dias', class: 'atraso-2-dias' };
+    if (diffDays === 3) return { text: '3 dias', class: 'atraso-3-dias' };
+    return { text: `${diffDays}+ dias`, class: 'atraso-4-mais-dias blink' };
 }
 
 // ============================
