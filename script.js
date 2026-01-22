@@ -13,6 +13,7 @@ let appData = {
     admin: null, // Será carregado do Supabase
     leaders: [], // Serão carregados do Supabase
     billings: [], // Serão carregados do Supabase
+    colaboradores: [], // Serão carregados do Supabase
     teams: ['Equipe A', 'Equipe B', 'Equipe C'], // Equipes iniciais (Pode ser migrado para Supabase se necessário)
     romaneios: [], // Será populado pelo Supabase
     currentUser: null, // Salvo localmente para manter o estado de login
@@ -30,6 +31,7 @@ const ROMANEIOS_TABLE = 'romaneios';
 const ADMIN_TABLE = 'admin_user';
 const LEADERS_TABLE = 'leaders';
 const BILLINGS_TABLE = 'billings';
+const COLABORADORES_TABLE = 'colaboradores';
 
 // =================================================================================
 // FUNÇÕES DE INTEGRAÇÃO COM SUPABASE (CARREGAMENTO)
@@ -104,6 +106,22 @@ async function loadRomaneiosFromSupabase() {
 }
 
 /**
+ * Carrega os colaboradores do Supabase.
+ */
+async function loadColaboradoresFromSupabase() {
+    const { data, error } = await supabaseClient
+        .from(COLABORADORES_TABLE)
+        .select('*');
+
+    if (error) {
+        console.error('Erro ao carregar colaboradores do Supabase:', error);
+        appData.colaboradores = [];
+    } else {
+        appData.colaboradores = data;
+    }
+}
+
+/**
  * Carrega todos os dados do Supabase.
  */
 async function loadAllDataFromSupabase() {
@@ -111,6 +129,7 @@ async function loadAllDataFromSupabase() {
         loadAdminFromSupabase(),
         loadLeadersFromSupabase(),
         loadBillingsFromSupabase(),
+        loadColaboradoresFromSupabase(),
         loadRomaneiosFromSupabase()
     ]);
 }
@@ -246,6 +265,40 @@ async function removeBillingFromSupabase(billingId) {
 }
 
 /**
+ * Salva um novo Colaborador no Supabase.
+ */
+async function saveColaboradorToSupabase(colaboradorData) {
+    const { data, error } = await supabaseClient
+        .from(COLABORADORES_TABLE)
+        .insert([colaboradorData])
+        .select();
+
+    if (error) {
+        console.error('Erro ao salvar Colaborador no Supabase:', error);
+        return null;
+    }
+    appData.colaboradores.push(data[0]);
+    return data[0];
+}
+
+/**
+ * Remove um Colaborador do Supabase.
+ */
+async function removeColaboradorFromSupabase(colaboradorId) {
+    const { error } = await supabaseClient
+        .from(COLABORADORES_TABLE)
+        .delete()
+        .eq('id', colaboradorId);
+
+    if (error) {
+        console.error('Erro ao remover Colaborador do Supabase:', error);
+        return false;
+    }
+    appData.colaboradores = appData.colaboradores.filter(c => c.id !== colaboradorId);
+    return true;
+}
+
+/**
  * Salva um novo romaneio no Supabase.
  */
 async function saveNewRomaneioToSupabase(romaneio) {
@@ -361,8 +414,14 @@ async function checkInitialState() {
             $('#tab-admin-login').style.display = 'none';
         }
     }
+    
+    // Verifica se colaborador está logado
+    if (appData.currentRole === 'Colaborador' && appData.currentUser) {
+        renderColaboradorPainel();
+        showScreen('#screen-colaborador');
+    }
     // Garante que o dashboard seja renderizado com os dados do Supabase se o usuário já estiver logado
-    if (appData.currentUser && appData.currentRole) {
+    else if (appData.currentUser && appData.currentRole) {
         renderDashboard();
         showScreen('#screen-dashboard');
     }
@@ -642,6 +701,67 @@ if ($('#form-add-billing')) {
     });
 }
 
+function renderColaboradorList() {
+    const ul = $('#lista-colaboradores');
+    
+    // Verifica se o elemento existe antes de manipular
+    if (!ul) {
+        console.warn('Elemento #lista-colaboradores não encontrado. Pulando renderização de colaboradores.');
+        return;
+    }
+    
+    ul.innerHTML = '';
+    appData.colaboradores.forEach((colab, index) => {
+        const li = document.createElement('li');
+        li.className = 'flex justify-between items-center p-2 border-b';
+        li.innerHTML = `<span>${colab.name}</span>`;
+        const btnRemove = document.createElement('button');
+        btnRemove.textContent = 'Remover';
+        btnRemove.className = 'bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded text-sm';
+        btnRemove.addEventListener('click', async () => {
+            if (await removeColaboradorFromSupabase(colab.id)) {
+                renderColaboradorList();
+            } else {
+                alert('Erro ao remover colaborador.');
+            }
+        });
+        li.appendChild(btnRemove);
+        ul.appendChild(li);
+    });
+}
+
+if ($('#form-add-colaborador')) {
+    $('#form-add-colaborador').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const nameInput = $('#colaborador-name-input');
+        const passwordInput = $('#colaborador-password-input');
+        
+        // Verifica se os elementos existem
+        if (!nameInput || !passwordInput) {
+            console.error('Erro: Campos de Nome ou Senha do Colaborador não encontrados no HTML.');
+            return;
+        }
+
+        const name = nameInput.value.trim();
+        const password = passwordInput.value;
+        
+        if (name && password.length >= 6) {
+            const newColaborador = {
+                name: name,
+                passwordHash: hashPassword(password)
+            };
+            
+            if (await saveColaboradorToSupabase(newColaborador)) {
+                renderColaboradorList();
+                nameInput.value = '';
+                passwordInput.value = '';
+            } else {
+                alert('Erro ao adicionar colaborador.');
+            }
+        }
+    });
+}
+
 // ... (O restante do código de renderização e lógica de romaneios é mantido)
 
 // Funções de Utilidade (continuação)
@@ -908,6 +1028,7 @@ function renderDashboard() {
     // Renderiza as listas de gerenciamento (Agora usam dados do Supabase)
     renderLeaderList();
     renderBillingList();
+    renderColaboradorList();
     renderTeamList();
     renderEquipeDestinoOptions();
 }
@@ -1969,6 +2090,264 @@ function renderHistoricoFaturamento() {
         const el = document.getElementById('filtro-data-faturamento');
         if (el) el.value = '';
         renderHistoricoFaturamento();
+    });
+}
+
+// =================================================================================
+// LÓGICA DE COLABORADOR (COLETOR)
+// =================================================================================
+
+// Login de Colaborador
+if ($('#form-colaborador-login')) {
+    $('#form-colaborador-login').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const nameInput = $('#colab-login-name');
+        const passwordInput = $('#colab-login-password');
+        const errorEl = $('#colab-login-error');
+        
+        if (errorEl) errorEl.classList.add('hidden');
+        
+        const name = nameInput.value.trim();
+        const password = passwordInput.value;
+        
+        if (!name || !password) {
+            if (errorEl) {
+                errorEl.textContent = 'Preencha nome e senha.';
+                errorEl.classList.remove('hidden');
+            }
+            return;
+        }
+        
+        await loadAllDataFromSupabase();
+        
+        // Tenta autenticar colaborador
+        const colaborador = appData.colaboradores.find(c => 
+            String(c.name).toLowerCase() === String(name).toLowerCase() && 
+            c.passwordHash === hashPassword(password)
+        );
+        
+        if (colaborador) {
+            appData.currentUser = { id: colaborador.id, name: colaborador.name };
+            appData.currentRole = 'Colaborador';
+            saveLocalState();
+            renderColaboradorPainel();
+            showScreen('#screen-colaborador');
+        } else {
+            if (errorEl) {
+                errorEl.textContent = 'Colaborador ou senha inválidos.';
+                errorEl.classList.remove('hidden');
+            }
+        }
+    });
+}
+
+// Logout de Colaborador
+if ($('#btn-colab-logout')) {
+    $('#btn-colab-logout').addEventListener('click', () => {
+        appData.currentUser = null;
+        appData.currentRole = null;
+        saveLocalState();
+        showScreen('#screen-colaborador-login');
+        // Limpa os campos
+        if ($('#colab-login-name')) $('#colab-login-name').value = '';
+        if ($('#colab-login-password')) $('#colab-login-password').value = '';
+        if ($('#colab-numero-pedido')) $('#colab-numero-pedido').value = '';
+    });
+}
+
+function renderColaboradorPainel() {
+    if (appData.currentUser) {
+        $('#colab-user-info').textContent = `${appData.currentUser.name}`;
+    }
+    limparPainelColaborador();
+}
+
+function limparPainelColaborador() {
+    if ($('#colab-numero-pedido')) $('#colab-numero-pedido').value = '';
+    if ($('#colab-acoes-adicionais')) $('#colab-acoes-adicionais').classList.add('hidden');
+    if ($('#colab-pedido-info')) $('#colab-pedido-info').classList.add('hidden');
+    if ($('#colab-status-message')) $('#colab-status-message').classList.add('hidden');
+    if ($('#colab-numero-pedido')) $('#colab-numero-pedido').focus();
+    atualizarHistoricoColaborador();
+}
+
+// Ações do Colaborador
+let pedidoAtualColab = null;
+
+if ($('#btn-colab-iniciar')) {
+    $('#btn-colab-iniciar').addEventListener('click', async () => {
+        const numeroPedido = $('#colab-numero-pedido').value.trim();
+        const msgEl = $('#colab-status-message');
+        
+        if (!numeroPedido) {
+            if (msgEl) {
+                msgEl.textContent = '❌ Digite ou escaneie o número do pedido';
+                msgEl.classList.remove('hidden', 'bg-green-100', 'text-green-800');
+                msgEl.classList.add('bg-red-100', 'text-red-800');
+            }
+            return;
+        }
+        
+        const romaneio = appData.romaneios.find(r => String(r.numero) === String(numeroPedido));
+        
+        if (!romaneio) {
+            if (msgEl) {
+                msgEl.textContent = `❌ Pedido ${numeroPedido} não encontrado`;
+                msgEl.classList.remove('hidden', 'bg-green-100', 'text-green-800');
+                msgEl.classList.add('bg-red-100', 'text-red-800');
+            }
+            return;
+        }
+        
+        // Se o pedido não está em separação, inicia
+        if (romaneio.status !== 'Em separação') {
+            // Inicia o pedido
+            await updateRomaneioStatus(
+                numeroPedido,
+                'Em separação',
+                appData.currentUser.name,
+                'Colaborador',
+                { dataInicio: new Date().toISOString() }
+            );
+            
+            pedidoAtualColab = numeroPedido;
+            
+            if (msgEl) {
+                msgEl.textContent = `✓ Pedido ${numeroPedido} iniciado com sucesso!`;
+                msgEl.classList.remove('hidden', 'bg-red-100', 'text-red-800');
+                msgEl.classList.add('bg-green-100', 'text-green-800');
+            }
+            
+            // Mostra info do pedido
+            if ($('#colab-pedido-info')) {
+                $('#colab-info-numero').textContent = numeroPedido;
+                $('#colab-info-status').textContent = 'Em separação';
+                $('#colab-info-hora').textContent = new Date().toLocaleTimeString('pt-BR');
+                $('#colab-pedido-info').classList.remove('hidden');
+            }
+            
+            // Mostra botões de finalizar/devolver
+            if ($('#colab-acoes-adicionais')) {
+                $('#colab-acoes-adicionais').classList.remove('hidden');
+            }
+        } else {
+            // Pedido já está em separação, mostra opções de finalizar/devolver
+            pedidoAtualColab = numeroPedido;
+            
+            if (msgEl) {
+                msgEl.textContent = `⚠ Pedido ${numeroPedido} já está em processo`;
+                msgEl.classList.remove('hidden', 'bg-red-100', 'text-red-800');
+                msgEl.classList.add('bg-blue-100', 'text-blue-800');
+            }
+            
+            // Mostra info do pedido
+            if ($('#colab-pedido-info')) {
+                $('#colab-info-numero').textContent = numeroPedido;
+                $('#colab-info-status').textContent = romaneio.status;
+                $('#colab-info-hora').textContent = new Date().toLocaleTimeString('pt-BR');
+                $('#colab-pedido-info').classList.remove('hidden');
+            }
+            
+            // Mostra botões de finalizar/devolver
+            if ($('#colab-acoes-adicionais')) {
+                $('#colab-acoes-adicionais').classList.remove('hidden');
+            }
+        }
+    });
+}
+
+if ($('#btn-colab-finalizar')) {
+    $('#btn-colab-finalizar').addEventListener('click', async () => {
+        if (!pedidoAtualColab) return;
+        
+        await updateRomaneioStatus(
+            pedidoAtualColab,
+            'Pendente de faturamento',
+            appData.currentUser.name,
+            'Colaborador',
+            { dataFinalizacao: new Date().toISOString() }
+        );
+        
+        const msgEl = $('#colab-status-message');
+        if (msgEl) {
+            msgEl.textContent = `✓ Pedido ${pedidoAtualColab} finalizado com sucesso!`;
+            msgEl.classList.remove('hidden', 'bg-red-100', 'text-red-800', 'bg-blue-100', 'text-blue-800');
+            msgEl.classList.add('bg-green-100', 'text-green-800');
+        }
+        
+        setTimeout(() => limparPainelColaborador(), 2000);
+    });
+}
+
+if ($('#btn-colab-devolver')) {
+    $('#btn-colab-devolver').addEventListener('click', async () => {
+        if (!pedidoAtualColab) return;
+        
+        await updateRomaneioStatus(
+            pedidoAtualColab,
+            'Disponível',
+            appData.currentUser.name,
+            'Colaborador',
+            { motivoDevolucao: 'Semi acabado', dataDevolucao: new Date().toISOString() }
+        );
+        
+        const msgEl = $('#colab-status-message');
+        if (msgEl) {
+            msgEl.textContent = `↩ Pedido ${pedidoAtualColab} devolvido para a fila`;
+            msgEl.classList.remove('hidden', 'bg-red-100', 'text-red-800', 'bg-green-100', 'text-green-800');
+            msgEl.classList.add('bg-blue-100', 'text-blue-800');
+        }
+        
+        setTimeout(() => limparPainelColaborador(), 2000);
+    });
+}
+
+if ($('#btn-colab-cancelar-acoes')) {
+    $('#btn-colab-cancelar-acoes').addEventListener('click', () => {
+        limparPainelColaborador();
+    });
+}
+
+function atualizarHistoricoColaborador() {
+    const historico = $('#colab-historico');
+    if (!historico) return;
+    
+    historico.innerHTML = '';
+    
+    // Pega os últimos 5 eventos do colaborador
+    const eventos = appData.romaneios
+        .filter(r => r.historico && Array.isArray(r.historico))
+        .map(r => 
+            r.historico
+                .filter(h => h.user === appData.currentUser.name && h.role === 'Colaborador')
+                .map(h => ({ 
+                    numero: r.numero, 
+                    ...h,
+                    timestamp: new Date(h.timestamp)
+                }))
+        )
+        .flat()
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, 5);
+    
+    if (eventos.length === 0) {
+        historico.innerHTML = '<p class="text-gray-500 text-center">Nenhuma ação registrada</p>';
+        return;
+    }
+    
+    eventos.forEach(evt => {
+        const div = document.createElement('div');
+        div.className = 'bg-gray-50 p-2 rounded border border-gray-200';
+        div.innerHTML = `
+            <div class="flex justify-between items-start">
+                <div>
+                    <strong>Pedido ${evt.numero}</strong><br>
+                    <span class="text-xs text-gray-600">${evt.status}</span>
+                </div>
+                <span class="text-xs text-gray-500">${evt.timestamp.toLocaleTimeString('pt-BR')}</span>
+            </div>
+        `;
+        historico.appendChild(div);
     });
 }
 
