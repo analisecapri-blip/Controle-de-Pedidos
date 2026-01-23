@@ -111,7 +111,7 @@ async function loadRomaneiosFromSupabase() {
 async function loadColaboradoresFromSupabase() {
     const { data, error } = await supabaseClient
         .from(COLABORADORES_TABLE)
-        .select('*');
+        .select('*')
 
     if (error) {
         console.error('Erro ao carregar colaboradores do Supabase:', error);
@@ -768,8 +768,8 @@ if ($('#form-add-colaborador')) {
         }
         
         const newColaborador = {
-            name: name,
-            passwordHash: hashPassword(password)
+            nome: name,
+            hash_de_senha: hashPassword(password)
         };
         
         try {
