@@ -275,8 +275,19 @@ async function saveColaboradorToSupabase(colaboradorData) {
 
     if (error) {
         console.error('Erro ao salvar Colaborador no Supabase:', error);
-        return null;
+        console.error('Detalhes do erro:', {
+            message: error.message,
+            code: error.code,
+            details: error.details
+        });
+        throw new Error(`Erro Supabase: ${error.message} (código: ${error.code})`);
     }
+    
+    if (!data || data.length === 0) {
+        console.error('Nenhum dado retornado após inserção');
+        throw new Error('Nenhum dado retornado após inserção');
+    }
+    
     appData.colaboradores.push(data[0]);
     return data[0];
 }
@@ -739,25 +750,42 @@ if ($('#form-add-colaborador')) {
         // Verifica se os elementos existem
         if (!nameInput || !passwordInput) {
             console.error('Erro: Campos de Nome ou Senha do Colaborador não encontrados no HTML.');
+            alert('Erro: Campos não encontrados. Recarregue a página.');
             return;
         }
 
         const name = nameInput.value.trim();
         const password = passwordInput.value;
         
-        if (name && password.length >= 6) {
-            const newColaborador = {
-                name: name,
-                passwordHash: hashPassword(password)
-            };
-            
-            if (await saveColaboradorToSupabase(newColaborador)) {
+        if (!name) {
+            alert('Digite o nome do colaborador.');
+            return;
+        }
+        
+        if (password.length < 6) {
+            alert('Senha deve ter pelo menos 6 caracteres.');
+            return;
+        }
+        
+        const newColaborador = {
+            name: name,
+            passwordHash: hashPassword(password)
+        };
+        
+        try {
+            const resultado = await saveColaboradorToSupabase(newColaborador);
+            if (resultado) {
                 renderColaboradorList();
                 nameInput.value = '';
                 passwordInput.value = '';
+                alert('✓ Colaborador adicionado com sucesso!');
             } else {
-                alert('Erro ao adicionar colaborador.');
+                alert('❌ Erro ao adicionar colaborador. Verifique o console (F12) para mais detalhes.');
+                console.error('Falha ao salvar colaborador no Supabase');
             }
+        } catch (error) {
+            alert(`❌ Erro: ${error.message}`);
+            console.error('Erro ao adicionar colaborador:', error);
         }
     });
 }
