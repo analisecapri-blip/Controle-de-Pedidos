@@ -878,12 +878,30 @@ if ($('#form-unified-login')) {
             if (user) detectedRole = 'Faturamento';
         }
 
+        // 4) Tenta Colaborador por nome
+        if (!user && Array.isArray(appData.colaboradores)) {
+            user = appData.colaboradores.find(c => (
+                c.nome && String(c.nome).toLowerCase() === String(identifier).toLowerCase()
+            ) && c.hash_de_senha === hashPassword(password));
+            if (user) detectedRole = 'Colaborador';
+        }
+
         if (user && detectedRole) {
-            appData.currentUser = { id: user.id || null, name: user.name, email: user.email || null };
+            if (detectedRole === 'Colaborador') {
+                appData.currentUser = { id: user.id || null, name: user.nome };
+            } else {
+                appData.currentUser = { id: user.id || null, name: user.name, email: user.email || null };
+            }
             appData.currentRole = detectedRole;
             saveLocalState();
-            renderDashboard();
-            showScreen('#screen-dashboard');
+            
+            if (detectedRole === 'Colaborador') {
+                renderColaboradorPainel();
+                showScreen('#screen-colaborador');
+            } else {
+                renderDashboard();
+                showScreen('#screen-dashboard');
+            }
         } else {
             if (unifiedError) {
                 unifiedError.textContent = 'Identificador ou senha incorretos.';
