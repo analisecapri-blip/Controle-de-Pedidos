@@ -1,0 +1,75 @@
+# 🚨 ERRO: Could not find the 'leader_id' column - SOLUÇÃO RÁPIDA
+
+## Sua Situação
+Você tentou criar uma equipe e recebeu:
+```
+Erro ao criar equipe: Could not find the 'leader_id' column of 'teams' in the schema cache
+```
+
+---
+
+## O Problema
+A tabela `teams` foi criada **incompleta** no Supabase.
+
+---
+
+## A Solução (4 cliques)
+
+### 1. Abra Supabase
+Acesse: https://supabase.com/dashboard
+
+### 2. SQL Editor
+Clique no menu lateral: **SQL Editor**
+
+### 3. New Query
+Clique em **+ New Query**
+
+### 4. Cole Este SQL
+```sql
+DROP TABLE IF EXISTS teams CASCADE;
+
+CREATE TABLE teams (
+    id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    leader_id BIGINT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (leader_id) REFERENCES leaders(id) ON DELETE SET NULL
+);
+
+CREATE INDEX idx_teams_leader_id ON teams(leader_id);
+```
+
+### 5. Clique "Run"
+Ou pressione `Ctrl + Enter`
+
+### 6. Resultado
+Deve aparecer: ✅ Query executed successfully
+
+---
+
+## Volta à Aplicação
+
+### 1. Recarregue
+Pressione: `F5`
+
+### 2. Faça Login Novamente
+Logout → Login
+
+### 3. Teste
+- Admin → Histórico e Configurações → Equipes
+- Crie uma equipe
+- **Deve funcionar agora! ✅**
+
+---
+
+## Arquivo com SQL Pronto
+Se preferir copiar de um arquivo:
+→ `SQL_CORRIGIR_TABELA_TEAMS.sql`
+
+---
+
+**Tempo total**: ~3 minutos  
+**Resultado**: ✅ Sistema funciona
+
+Pronto! Agora cria a equipe sem erro.
