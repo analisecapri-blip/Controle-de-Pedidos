@@ -32,6 +32,7 @@ const ADMIN_TABLE = 'admin_user';
 const LEADERS_TABLE = 'leaders';
 const BILLINGS_TABLE = 'billings';
 const COLABORADORES_TABLE = 'colaboradores';
+const TEAMS_TABLE = 'teams'; // Tabela para gerenciar equipes
 
 // =================================================================================
 // FUNÇÕES DE INTEGRAÇÃO COM SUPABASE (CARREGAMENTO)
@@ -89,6 +90,27 @@ async function loadBillingsFromSupabase() {
 }
 
 /**
+ * Carrega as Equipes do Supabase.
+ */
+async function loadTeamsFromSupabase() {
+    const { data, error } = await supabaseClient
+        .from(TEAMS_TABLE)
+        .select('*')
+        .order('name', { ascending: true });
+
+    if (error) {
+        console.error('Erro ao carregar Equipes do Supabase:', error);
+        appData.teams = [];
+    } else {
+        appData.teams = data || [];
+        // Atualiza as listas na interface
+        try { renderTeamList(); } catch (err) { console.warn('renderTeamList:', err); }
+        try { renderEquipeDestinoOptions(); } catch (err) { console.warn('renderEquipeDestinoOptions:', err); }
+        try { populateTeamLeaderSelect(); } catch (err) { console.warn('populateTeamLeaderSelect:', err); }
+    }
+}
+
+/**
  * Carrega os romaneios do Supabase.
  */
 async function loadRomaneiosFromSupabase() {
@@ -128,6 +150,7 @@ async function loadAllDataFromSupabase() {
     await Promise.all([
         loadAdminFromSupabase(),
         loadLeadersFromSupabase(),
+        loadTeamsFromSupabase(),
         loadBillingsFromSupabase(),
         loadColaboradoresFromSupabase(),
         loadRomaneiosFromSupabase()
@@ -1783,27 +1806,55 @@ function renderTeamList() {
     }
 
     ul.innerHTML = '';
-    appData.teams.forEach((team, index) => {
+    appData.teams.forEach((team) => {
         const li = document.createElement('li');
-        li.className = 'flex justify-between items-center p-2 border-b';
-        // Suporta equipe como string ou objeto { id, name, leaderId }
-        const teamLabel = (team && typeof team === 'object') ? team.name : team;
-        const leaderInfo = (team && typeof team === 'object' && team.leaderId)
-            ? ` — ${getLeaderNameById(team.leaderId) || 'Líder indefinido'}`
+        li.className = 'flex justify-between items-center p-2 border-b hover:bg-gray-50';
+        
+        // Suporta equipe como objeto do Supabase { id, name, leader_id }
+        const teamName = (team && typeof team === 'object') ? team.name : team;
+        const leaderId = (team && typeof team === 'object') ? team.leader_id : null;
+        const leaderInfo = leaderId
+            ? ` — ${getLeaderNameById(leaderId) || 'Líder indefinido'}`
             : '';
-        li.innerHTML = `<span>${teamLabel}${leaderInfo}</span>`;
+        
+        li.innerHTML = `<span>${teamName}${leaderInfo}</span>`;
+        
         const btnRemove = document.createElement('button');
         btnRemove.textContent = 'Remover';
         btnRemove.className = 'bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded text-sm';
-        btnRemove.addEventListener('click', () => {
-            appData.teams.splice(index, 1);
-            saveLocalState(); // Salva localmente (Equipes não foram migradas para Supabase)
-            renderTeamList();
-            renderEquipeDestinoOptions();
+        btnRemove.addEventListener('click', async () => {
+            if (confirm(`Tem certeza que deseja remover a equipe "${teamName}"?`)) {
+                await removeTeamFromSupabase(team.id);
+            }
         });
         li.appendChild(btnRemove);
         ul.appendChild(li);
     });
+}
+
+// Remove equipe do Supabase
+async function removeTeamFromSupabase(teamId) {
+    try {
+        const { error } = await supabaseClient
+            .from(TEAMS_TABLE)
+            .delete()
+            .eq('id', teamId);
+
+        if (error) {
+            console.error('Erro ao remover equipe:', error);
+            alert(`Erro ao remover equipe: ${error.message}`);
+            return;
+        }
+
+        // Remove da lista local
+        appData.teams = appData.teams.filter(t => t.id !== teamId);
+        renderTeamList();
+        renderEquipeDestinoOptions();
+        alert('Equipe removida com sucesso!');
+    } catch (err) {
+        console.error('Erro ao remover equipe:', err);
+        alert('Erro ao remover equipe. Verifique o console.');
+    }
 }
 
 // Retorna o nome do líder pelo id (ou null)
@@ -1833,7 +1884,7 @@ function generateId() {
 // Handler para adicionar equipe (corrigido para ids do HTML)
 const formAddTeam = $('#form-add-team');
 if (formAddTeam) {
-    formAddTeam.addEventListener('submit', (e) => {
+    formAddTeam.addEventListener('submit', async (e) => {
         e.preventDefault();
         const nameInput = $('#team-name-input');
         const leaderSelect = $('#team-leader-select');
@@ -1842,14 +1893,11 @@ if (formAddTeam) {
             return;
         }
         const name = nameInput.value.trim();
-        const leaderId = leaderSelect ? leaderSelect.value : '';
+        const leaderId = leaderSelect ? leaderSelect.value : null;
 
-        if (!name) return;
-
-        // Suporta manter o formato antigo (string) ou objeto quando um líder é atribuído
-        let newTeam = name;
-        if (leaderId) {
-            newTeam = { id: generateId(), name, leaderId };
+        if (!name) {
+            alert('Digite um nome para a equipe.');
+            return;
         }
 
         // Evita duplicatas por nome
@@ -1858,13 +1906,43 @@ if (formAddTeam) {
             return t === name;
         });
 
-        if (!exists) {
-            appData.teams.push(newTeam);
-            saveLocalState(); // Salva localmente
-            renderTeamList();
-            renderEquipeDestinoOptions();
+        if (exists) {
+            alert('Esta equipe já existe.');
+            return;
+        }
+
+        try {
+            // Salva a nova equipe no Supabase
+            const newTeamData = {
+                name,
+                leader_id: leaderId || null
+            };
+
+            const { data, error } = await supabaseClient
+                .from(TEAMS_TABLE)
+                .insert([newTeamData])
+                .select();
+
+            if (error) {
+                console.error('Erro ao salvar equipe:', error);
+                alert(`Erro ao criar equipe: ${error.message}`);
+                return;
+            }
+
+            // Adiciona a equipe carregada do Supabase (com ID gerado)
+            appData.teams.push(data[0]);
+            
+            // Limpa formulário e atualiza interface
             nameInput.value = '';
             if (leaderSelect) leaderSelect.value = '';
+            
+            renderTeamList();
+            renderEquipeDestinoOptions();
+            
+            alert('Equipe criada com sucesso!');
+        } catch (err) {
+            console.error('Erro ao adicionar equipe:', err);
+            alert('Erro ao criar equipe. Verifique o console.');
         }
     });
 }
@@ -1880,17 +1958,22 @@ function renderEquipeDestinoOptions() {
         }
         select.innerHTML = '<option value="">Selecione a Equipe</option>';
 
-        // Decide quais equipes mostrar: para o select de separação e usuário Líder,
-        // mostramos equipes atribuídas ao líder (objetos com leaderId igual ao id do líder)
-        // e também todas as equipes "gerais" (strings ou objetos sem leaderId). Isso
-        // habilita todos os líderes adicionados a utilizarem as equipes montadas.
+        // Mostra todas as equipes para o admin
+        // Para líderes, mostra as equipes atribuídas a eles + as equipes sem atribuição (genéricas)
         let teamsToShow = appData.teams || [];
+        
         if (id === '#separacao-equipe-destino' && appData.currentRole === 'Líder' && appData.currentUser && appData.currentUser.id) {
+            // Líder vê apenas suas equipes atribuídas + equipes genéricas (sem líder)
             teamsToShow = teamsToShow.filter(t => {
-                if (t && typeof t === 'object' && 'leaderId' in t) {
-                    return String(t.leaderId) === String(appData.currentUser.id);
-                }
-                return true;
+                if (!t) return false;
+                // Se é string, é equipe genérica (antiga), mostra para todos
+                if (typeof t === 'string') return true;
+                // Se é objeto e tem leader_id igual ao do líder atual, mostra
+                if (t.leader_id === appData.currentUser.id) return true;
+                // Se é objeto e NÃO tem leader_id (genérica), mostra
+                if (!t.leader_id) return true;
+                // Caso contrário, não mostra
+                return false;
             });
         }
 
