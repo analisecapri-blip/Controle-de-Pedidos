@@ -1,0 +1,31 @@
+INSTRUÇÕES DE USO - IMPORTAÇÃO DE EXCEL
+
+1. FORMATO DO ARQUIVO EXCEL:
+   - O arquivo deve conter as seguintes colunas: Pedido, Transportadora, Saldo
+   - Exemplo:
+
+   Pedido          | Transportadora  | Saldo
+   --------------- | --------------- | --------
+   1001            | JadLog          | 1500
+   1002            | Sedex           | 2000
+   1003            | Transportadora A | 1800
+
+2. COMO USAR:
+   a) Na tela do admin, acesse a aba "Abastecimento de Romaneios"
+   b) Clique em "Selecionar arquivo" e escolha seu arquivo Excel (.xlsx, .xls ou .csv)
+   c) O sistema irá ler o arquivo e mostrar uma prévia dos dados
+   d) Defina a "Data e Hora de Entrega" (será a mesma para todos os romaneios)
+   e) Clique em "CONFIRMAR IMPORTAÇÃO" para adicionar os dados ao sistema
+
+3. COMPORTAMENTO DO SISTEMA:
+   - O campo "Pedido" será tratado como o número do romaneio
+   - Os campos "Transportadora" e "Saldo" serão armazenados como informações adicionais
+   - Romaneios duplicados serão ignorados automaticamente
+   - Será mostrada uma mensagem informando quantos romaneios foram importados
+
+4. COLUNAS SUPORTADAS:
+   - A detecção de colunas é insensível a maiúsculas e minúsculas
+   - Variações aceitas:
+     • "Pedido", "pedido", "PEDIDO"
+     • "Transportadora", "transportadora", "Transportador", "transportador"
+     • "Saldo", "saldo"

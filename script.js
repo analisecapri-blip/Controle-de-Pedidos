@@ -1204,6 +1204,241 @@ if ($('#btn-adicionar-romaneios')) {
     });
 }
 
+// =====================================================================
+// IMPORTAÇÃO DE EXCEL (ABA ABASTECIMENTO)
+// =====================================================================
+
+let excelDataPreview = []; // Variável global para armazenar dados do Excel antes de confirmar
+
+if ($('#btn-importar-excel')) {
+    $('#excel-file-input').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        
+        if (!file) {
+            excelDataPreview = [];
+            $('#excel-preview-container').classList.add('hidden');
+            return;
+        }
+
+        try {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const data = new Uint8Array(event.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                    // Validar se possui as colunas necessárias
+                    if (jsonData.length === 0) {
+                        alert('O arquivo Excel está vazio.');
+                        return;
+                    }
+
+                    // Detectar colunas (insensível a maiúsculas)
+                    const firstRow = jsonData[0];
+                    const columnNames = Object.keys(firstRow).map(key => key.toLowerCase().trim());
+                    
+                    let pedidoCol = null;
+                    let transportadoraCol = null;
+                    let saldoCol = null;
+
+                    // Procurar pelas colunas esperadas
+                    Object.keys(firstRow).forEach(col => {
+                        const colLower = col.toLowerCase().trim();
+                        if (colLower.includes('pedido')) {
+                            pedidoCol = col;
+                        } else if (colLower.includes('transportadora') || colLower.includes('transportador')) {
+                            transportadoraCol = col;
+                        } else if (colLower.includes('saldo')) {
+                            saldoCol = col;
+                        }
+                    });
+
+                    if (!pedidoCol || !transportadoraCol || !saldoCol) {
+                        alert(`Colunas não encontradas. Esperado: Pedido, Transportadora e Saldo.\n\nColunas encontradas: ${Object.keys(firstRow).join(', ')}`);
+                        return;
+                    }
+
+                    // Processar e validar dados
+                    excelDataPreview = jsonData.map((row, index) => {
+                        const pedido = String(row[pedidoCol] || '').trim();
+                        const transportadora = String(row[transportadoraCol] || '').trim();
+                        const saldo = String(row[saldoCol] || '').trim();
+
+                        if (!pedido) {
+                            console.warn(`Linha ${index + 2}: Pedido vazio, será ignorado`);
+                            return null;
+                        }
+
+                        return {
+                            pedido,
+                            transportadora,
+                            saldo
+                        };
+                    }).filter(row => row !== null);
+
+                    if (excelDataPreview.length === 0) {
+                        alert('Nenhum dado válido encontrado no Excel.');
+                        return;
+                    }
+
+                    // Mostrar prévia dos dados
+                    showExcelPreview();
+
+                } catch (error) {
+                    console.error('Erro ao processar Excel:', error);
+                    alert('Erro ao processar o arquivo Excel: ' + error.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        } catch (error) {
+            console.error('Erro ao ler arquivo:', error);
+            alert('Erro ao ler o arquivo: ' + error.message);
+        }
+    });
+}
+
+// Função para mostrar prévia dos dados
+function showExcelPreview() {
+    const previewBody = $('#excel-preview-body');
+    previewBody.innerHTML = '';
+
+    // Mostrar apenas os primeiros 10 registros na prévia
+    excelDataPreview.slice(0, 10).forEach(row => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-gray-50';
+        tr.innerHTML = `
+            <td class="px-4 py-2 text-sm text-gray-900">${row.pedido}</td>
+            <td class="px-4 py-2 text-sm text-gray-900">${row.transportadora}</td>
+            <td class="px-4 py-2 text-sm text-gray-900">${row.saldo}</td>
+        `;
+        previewBody.appendChild(tr);
+    });
+
+    // Se houver mais de 10 registros, adicionar nota
+    if (excelDataPreview.length > 10) {
+        const tr = document.createElement('tr');
+        tr.className = 'bg-yellow-50';
+        tr.innerHTML = `
+            <td colspan="3" class="px-4 py-2 text-sm text-gray-600">
+                ... e mais ${excelDataPreview.length - 10} registros serão importados
+            </td>
+        `;
+        previewBody.appendChild(tr);
+    }
+
+    $('#excel-preview-container').classList.remove('hidden');
+}
+
+// Botão para confirmar importação
+if ($('#btn-confirmar-excel')) {
+    $('#btn-confirmar-excel').addEventListener('click', async (e) => {
+        e.preventDefault();
+
+        const dataEntrega = $('#data-entrega-excel-input').value;
+        const messageElement = $('#excel-import-message');
+        messageElement.classList.add('hidden');
+
+        if (!dataEntrega) {
+            messageElement.textContent = 'Preencha a data e hora de entrega.';
+            messageElement.classList.remove('hidden', 'text-green-500');
+            messageElement.classList.add('text-red-500');
+            return;
+        }
+
+        if (excelDataPreview.length === 0) {
+            messageElement.textContent = 'Nenhum dado para importar.';
+            messageElement.classList.remove('hidden', 'text-green-500');
+            messageElement.classList.add('text-red-500');
+            return;
+        }
+
+        let addedCount = 0;
+        let duplicateCount = 0;
+        const romaneiosParaInserir = [];
+
+        // Processar cada linha do Excel
+        excelDataPreview.forEach(row => {
+            // Usar o número do pedido como número de romaneio
+            const numeroRomaneio = row.pedido;
+
+            if (appData.romaneios.find(r => r.numero === numeroRomaneio)) {
+                duplicateCount++;
+                return; // Skip duplicado
+            }
+
+            romaneiosParaInserir.push({
+                numero: numeroRomaneio,
+                transportadora: row.transportadora,
+                saldo: row.saldo,
+                dataEntrega: dataEntrega,
+                status: 'Disponível',
+                historico: [{
+                    timestamp: new Date().toISOString(),
+                    status: 'Disponível',
+                    user: appData.currentUser.name,
+                    role: appData.currentRole
+                }]
+            });
+            addedCount++;
+        });
+
+        if (romaneiosParaInserir.length > 0) {
+            // Inserção em lote no Supabase
+            const { data, error } = await supabaseClient
+                .from(ROMANEIOS_TABLE)
+                .insert(romaneiosParaInserir)
+                .select();
+
+            if (error) {
+                console.error('Erro ao inserir romaneios do Excel:', error);
+                messageElement.textContent = `Erro ao importar dados: ${error.message}`;
+                messageElement.classList.remove('hidden', 'text-green-500');
+                messageElement.classList.add('text-red-500');
+                return;
+            }
+
+            // Adiciona os romaneios inseridos à lista local
+            appData.romaneios.push(...data);
+
+            // Limpa os campos e exibe a mensagem de sucesso
+            $('#excel-file-input').value = '';
+            $('#data-entrega-excel-input').value = '';
+            excelDataPreview = [];
+            $('#excel-preview-container').classList.add('hidden');
+
+            let successMsg = `${addedCount} romaneio(s) importado(s) com sucesso.`;
+            if (duplicateCount > 0) {
+                successMsg += ` (${duplicateCount} duplicados ignorados)`;
+            }
+
+            messageElement.textContent = successMsg;
+            messageElement.classList.remove('hidden', 'text-red-500');
+            messageElement.classList.add('text-green-500');
+
+            // Re-renderiza a fila FIFO para mostrar os novos romaneios
+            renderFilaFIFO();
+        } else {
+            messageElement.textContent = 'Todos os romaneios do Excel já existem.';
+            messageElement.classList.remove('hidden', 'text-green-500');
+            messageElement.classList.add('text-red-500');
+        }
+    });
+}
+
+// Botão para cancelar importação
+if ($('#btn-cancelar-excel')) {
+    $('#btn-cancelar-excel').addEventListener('click', (e) => {
+        e.preventDefault();
+        excelDataPreview = [];
+        $('#excel-file-input').value = '';
+        $('#data-entrega-excel-input').value = '';
+        $('#excel-preview-container').classList.add('hidden');
+        $('#excel-import-message').classList.add('hidden');
+    });
+}
+
 // Função auxiliar para encontrar e atualizar um romaneio localmente e no Supabase
 async function updateRomaneioStatus(romaneioNumero, newStatus, user, role, additionalData = {}) {
     const romaneioIndex = appData.romaneios.findIndex(r => String(r.numero) === String(romaneioNumero));
